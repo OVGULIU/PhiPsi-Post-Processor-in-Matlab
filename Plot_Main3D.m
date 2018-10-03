@@ -1,13 +1,24 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function Plot_Main3D(POST_Substep)
-% This function plots mesh, contours, vectors and so on.
+% This function plots mesh and deformed mesh for 3D problems.
 
 global Key_PLOT Full_Pathname Num_Node Num_Foc_x Num_Foc_y Foc_x Foc_y Num_Foc_z Foc_z
 global num_Crack Key_Dynamic Real_Iteras Real_Sub Key_Contour_Metd
 global Output_Freq num_Output_Sub Key_Crush DISP  FORCE_Matrix
+global Key_Data_Format
 
 scale = Key_PLOT(2,6);
 % Get the number of the substep for post process.
@@ -46,7 +57,21 @@ end
 
 % Read displacement file.
 disp('    > Reading displacement file....') 
-DISP= load([Full_Pathname,'.disn_',num2str(POST_Substep)]);
+% DISP= load([Full_Pathname,'.disn_',num2str(POST_Substep)]);
+if Key_Data_Format==1 
+	DISP   = load([Full_Pathname,'.disn_',num2str(POST_Substep)]);
+elseif Key_Data_Format==2  %Binary
+	c_file = fopen([Full_Pathname,'.disn_',num2str(POST_Substep)],'rb');
+	[cc_DISP,cc_count]   = fread(c_file,inf,'double');
+	fclose(c_file);
+	%转换成Matlab中的数据格式
+	for ccc_i=1:cc_count/3
+		DISP(ccc_i,1) = ccc_i;
+		DISP(ccc_i,2) = cc_DISP(ccc_i*3-2);
+		DISP(ccc_i,3) = cc_DISP(ccc_i*3-1);
+		DISP(ccc_i,4) = cc_DISP(ccc_i*3);
+	end
+end
 % size(DISP)
 
 % Read force file.
@@ -85,25 +110,13 @@ if num_Crack(POST_Substep) ~= 0
 	POS = load([Full_Pathname,'.posi_',num2str(POST_Substep)]);
 	% disp('    > Reading elty file....');
 	Elem_Type = load([Full_Pathname,'.elty_',num2str(POST_Substep)]);
-	% disp('    > Reading celc file....');
-	% Coors_Element_Crack = load([Full_Pathname,'.celc_',num2str(POST_Substep)]);
-	% disp('    > Reading njel file....');
-	% Node_Jun_elem = load([Full_Pathname,'.njel_',num2str(POST_Substep)]); %Junction增强节点对应的Junction单元号,added on 2016-07-11
-	% disp('    > Reading celv file....');
-	% Coors_Vertex        = load([Full_Pathname,'.celv_',num2str(POST_Substep)]);
-	% disp('    > Reading celj file....');
-	% Coors_Junction      = load([Full_Pathname,'.celj_',num2str(POST_Substep)]);
-	% disp('    > Reading celt file....');
-	% Coors_Tip           = load([Full_Pathname,'.celt_',num2str(POST_Substep)]);
-	% disp('    > Reading ctty file....');
-	% Crack_Tip_Type      = load([Full_Pathname,'.ctty_',num2str(POST_Substep)]);
 else
     Crack_X = [];   Crack_Y = [];  Crack_Z = [];
 	Enriched_Node_Type = [];
 	Elem_Type = [];x_cr_tip_nodes=[];y_cr_tip_nodes=[];
 	POS = []; Coors_Element_Crack= [];Coors_Vertex= [];
     Coors_Junction= []; Coors_Tip= []; Elem_Type= [];
-	Crack_Tip_Type= [];Node_Jun_elem=[];
+	Crack_Tip_Type= [];Node_Jun_elem=[];Node_Cross_elem=[];
 end
 
 % Read enriched nodes of cracks if cracks exist.
@@ -130,7 +143,22 @@ end
 % Read nodal average stress file.
 if Key_PLOT(3,1)~=0
     disp('    > Reading nodal average stress file....') 
-    Stress_Matrix = load([Full_Pathname,'.strn_',num2str(POST_Substep)]);
+	%读取节点应力
+	if Key_Data_Format==1 
+        Stress_Matrix = load([Full_Pathname,'.strn_',num2str(POST_Substep)]);
+	elseif Key_Data_Format==2  %Binary
+		% c_file = fopen([Full_Pathname,'.strn_',num2str(POST_Substep)],'rb');
+		% [cc_Stress_Matrix,cc_count]   = fread(c_file,inf,'double');
+		% fclose(c_file);
+		%%%%转换成Matlab中的数据格式
+		% for ccc_i=1:cc_count/4
+			% Stress_Matrix(ccc_i,1) = ccc_i;
+			% Stress_Matrix(ccc_i,2) = cc_Stress_Matrix(ccc_i*4-3);
+			% Stress_Matrix(ccc_i,3) = cc_Stress_Matrix(ccc_i*4-2);
+			% Stress_Matrix(ccc_i,4) = cc_Stress_Matrix(ccc_i*4-1);
+			% Stress_Matrix(ccc_i,5) = cc_Stress_Matrix(ccc_i*4);
+		% end
+	end
 end
 
 % Get the total force matrix(fx ,fy ,fsum).
@@ -156,49 +184,11 @@ if Key_PLOT(1,1)==1
     Plot_Mesh3D(POST_Substep,Crack_X,Crack_Y,Crack_Z,Post_Enriched_Nodes,POS)
 end
 
-% Calculating shaped crack points
-% if ((Key_PLOT(2,1) == 1 & Key_PLOT(2,5) == 2) || ...
-   % ((Key_PLOT(3,5) == 1 | Key_PLOT(3,5) == 2) & Key_PLOT(3,5) == 2) |...
-   % ((Key_PLOT(4,5) == 1 | Key_PLOT(4,5) == 2) & Key_PLOT(4,5) == 2)) ...
-                         % && num_Crack(POST_Substep)~=0
-	% disp(['    > Calculating shaped crack points......'])
-	% [Shaped_Crack_Points] = Cal_Shaped_Cracks(Crack_X,Crack_Y,POST_Substep,POST_Substep,num_Crack,Crack_Tip_Type,POS,...
-								   % Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-								   % Coors_Vertex,Coors_Junction,Coors_Tip,DISP,scale);
-% else
-	% Shaped_Crack_Points=[];						   
-% end
-
 % Plot deformation.
 if Key_PLOT(2,1)==1
     Plot_Deformation3D(POST_Substep,Crack_X,Crack_Y,Crack_Z,Post_Enriched_Nodes,POS)
 end
 
-% Plot nodal stress contours.
-% if Key_PLOT(3,1)==1
-    % Plot_Node_Stress(DISP,Stress_Matrix,POST_Substep,Crack_X,Crack_Y,POS,...
-	                 % Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-					 % Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
-% end
-
-% Plot Gauss points stress contours.
-% if Key_PLOT(3,1)==2
-    % Plot_Gauss_Stress(DISP,Stress_Matrix,POST_Substep,Crack_X,Crack_Y,POS,...
-	                 % Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-					 % Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
-% end
-
-% Plot nodal disp contours.
-% if Key_PLOT(4,1)==1
-    % Plot_Node_Disp(DISP,POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-					      % Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
-% end
-
-% Plot Gauss points disp contours.
-% if Key_PLOT(4,1)==2
-    % Plot_Gauss_Disp(DISP,POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,...
-					      % Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
-% end
 
 disp('    Plot completed.')
 disp(' ')

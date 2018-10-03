@@ -1,9 +1,19 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
-function Plot_Node_Field_Value(DISP,Field_Value,isub,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-					      Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
+function Plot_Node_Field_Value(DISP,Field_Value,isub,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,...
+					           Node_Cross_elem,Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
 % This function plots the displacement contours of all nodes.
 
 global Node_Coor Elem_Node Num_Elem
@@ -20,6 +30,7 @@ global Color_Inclusion
 global num_Poly_Inclusion Poly_Incl_Coor_x Poly_Incl_Coor_y
 global Field_Flux_x Field_Flux_y
 global max_area_ele
+global num_Cross Cross_Coor Enriched_Node_Type_Cross POS_Cross Elem_Type_Cross
 
 disp('    > Plotting field problem....') 
 
@@ -55,7 +66,6 @@ for i = 1:1
 	%...............
     Tools_New_Figure
 	hold on;
-	
 	%...............
 	%绘制标量场云图
 	%...............
@@ -82,18 +92,12 @@ for i = 1:1
 		contourf(X,Y,field,Num_Contourlevel,'LineStyle','none')
 		title('\it Field value','FontName','Times New Roman','FontSize',Size_Font)
 		clear field
+		
 		%Set colormap.
 		%colormap(gray)
 		%colormap(hot)
-		% colormap(cool)
+		%colormap(cool)
 		colormap(jet)
-		
-		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		% max_value = max(Field_Value(1:Num_Node))
-		% min_value = min(Field_Value(1:Num_Node))
-		caxis([2.4407e6,3.8617e7]); 
-		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		
 		%colorbar('FontAngle','italic','FontName','Times New Roman','FontSize',Size_Font);
 		colorbar('FontName','Times New Roman','FontSize',Size_Font);
 		set(gca,'XTick',[],'YTick',[],'XColor','w','YColor','w')
@@ -108,7 +112,7 @@ for i = 1:1
 					  Elem_Node(iElem,3) Elem_Node(iElem,4) Elem_Node(iElem,1)]; % Nodes for current element
 				xi = Node_Coor(NN',1);                                           % Deformed x-coordinates of nodes
 				yi = Node_Coor(NN',2);                                           % Deformed y-coordinates of nodes
-				plot(xi,yi,'LineWidth',1,'Color',Color_Mesh)
+				plot(xi,yi,'LineWidth',0.5,'Color',Color_Mesh)
 			end
 		elseif Key_PLOT(5,8)==1
 			for iElem =1:Num_Elem
@@ -116,7 +120,7 @@ for i = 1:1
 					  Elem_Node(iElem,3) Elem_Node(iElem,4) Elem_Node(iElem,1)];     % Nodes for current element
 				xi = New_Node_Coor(NN',1);                                           % Deformed x-coordinates of nodes
 				yi = New_Node_Coor(NN',2);                                           % Deformed y-coordinates of nodes
-				plot(xi,yi,'LineWidth',1,'Color',Color_Mesh)
+				plot(xi,yi,'LineWidth',0.5,'Color',Color_Mesh)
 			end
 		end
     end	
@@ -207,26 +211,30 @@ for i = 1:1
 				for iPt = 2:nPt
 					x = [Crack_X{i}(iPt-1) Crack_X{i}(iPt)];
 					y = [Crack_Y{i}(iPt-1) Crack_Y{i}(iPt)];
-					for j =1:2
-						% Get the local coordinates of the points of the crack. 
-						[Kesi,Yita] = Cal_KesiYita_by_Coors(x(j),y(j));
-						% Get the element number which contains the points of the crack. 
-						[c_Elem_Num] = Cal_Ele_Num_by_Coors(x(j),y(j));
-						% Calculate the displacement of the points of the crack. 
-						N1  = Elem_Node(c_Elem_Num,1);                                                  
-						N2  = Elem_Node(c_Elem_Num,2);                                                  
-						N3  = Elem_Node(c_Elem_Num,3);                                                  
-						N4  = Elem_Node(c_Elem_Num,4);                                                
-						U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3)...
-							 DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
-						% Calculates N, dNdkesi, J and the determinant of Jacobian matrix.
-						[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
-						dis_x(j) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
-						dis_y(j) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+					if isempty(DISP) ==0
+						for j =1:2
+							% Get the local coordinates of the points of the crack. 
+							[Kesi,Yita] = Cal_KesiYita_by_Coors(x(j),y(j));
+							% Get the element number which contains the points of the crack. 
+							[c_Elem_Num] = Cal_Ele_Num_by_Coors(x(j),y(j));
+							% Calculate the displacement of the points of the crack. 
+							N1  = Elem_Node(c_Elem_Num,1);                                                  
+							N2  = Elem_Node(c_Elem_Num,2);                                                  
+							N3  = Elem_Node(c_Elem_Num,3);                                                  
+							N4  = Elem_Node(c_Elem_Num,4);                                                
+							U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3)...
+								 DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+							% Calculates N, dNdkesi, J and the determinant of Jacobian matrix.
+							[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+							dis_x(j) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+							dis_y(j) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+						end
+						last_x = [ x(1)+dis_x(1)*scale x(2)+dis_x(2)*scale];
+						last_y = [ y(1)+dis_y(1)*scale y(2)+dis_y(2)*scale];
+					else
+						last_x = [ x(1)  x(2)];
+						last_y = [ y(1)  y(2)];					
 					end
-					
-					last_x = [ x(1)+dis_x(1)*scale x(2)+dis_x(2)*scale];
-					last_y = [ y(1)+dis_y(1)*scale y(2)+dis_y(2)*scale];
 					
 					plot(last_x,last_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)   
 				end
@@ -241,18 +249,31 @@ for i = 1:1
 			Coor_y  = Hole_Coor(iii,2);
 			c_R  = Hole_Coor(iii,3);
 			num_fineness = 100;
-			for j = 1:num_fineness+1
-				alpha = 2*pi/num_fineness*(j-1);
-				x(j) = Coor_x + c_R*cos(alpha);
-				y(j) = Coor_y + c_R*sin(alpha);
-				[Kesi,Yita] = Cal_KesiYita_by_Coors(x(j),y(j));
-				[c_Elem_Num] = Cal_Ele_Num_by_Coors(x(j),y(j));
-				[dis_x(j),dis_y(j)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi,Yita...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
+			if isempty(DISP) ==0
+				for j = 1:num_fineness+1
+					alpha = 2*pi/num_fineness*(j-1);
+					x(j) = Coor_x + c_R*cos(alpha);
+					y(j) = Coor_y + c_R*sin(alpha);
+					[c_Elem_Num] = Cal_Ele_Num_by_Coors(x(j),y(j));
+					%Sometimes the element does not exist, for example, only part of the hole locates inside the model	
+					if c_Elem_Num~=0
+						[Kesi,Yita] = Cal_KesiYita_by_Coors(x(j),y(j));
+						[dis_x(j),dis_y(j)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi,Yita...
+																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
+																	  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
+					end
+				end
+				x_new = x + dis_x*Key_PLOT(5,6);
+				y_new = y + dis_y*Key_PLOT(5,6);
+			else
+				for j = 1:num_fineness+1
+					alpha = 2*pi/num_fineness*(j-1);
+					x(j) = Coor_x + c_R*cos(alpha);
+					y(j) = Coor_y + c_R*sin(alpha);
+				end
+				x_new = x;  
+				y_new = y;
 			end
-			x_new = x + dis_x*Key_PLOT(5,6);
-			y_new = y + dis_y*Key_PLOT(5,6);
 			% plot(x_new,y_new,'-')
 			patch(x_new,y_new,'white','edgecolor','black','LineWidth',0.1)	
 		end	
@@ -272,7 +293,7 @@ for i = 1:1
 				[Kesi,Yita] = Cal_KesiYita_by_Coors(x(j),y(j));
 				[c_Elem_Num] = Cal_Ele_Num_by_Coors(x(j),y(j));
 				[dis_x(j),dis_y(j)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi,Yita...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
 			end
 			x_new = x + dis_x*Key_PLOT(5,6);
@@ -313,7 +334,7 @@ for i = 1:1
 				[Kesi,Yita] = Cal_KesiYita_by_Coors(x(k),y(k));
 				[c_Elem_Num] = Cal_Ele_Num_by_Coors(x(k),y(k));
 				[dis_x(k),dis_y(k)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi,Yita...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
 				%计算等分点的位移
 				for j =  1:Num_Diversion-1
@@ -323,7 +344,7 @@ for i = 1:1
 					[Kesi,Yita] = Cal_KesiYita_by_Coors(x(k),y(k));
 					[c_Elem_Num] = Cal_Ele_Num_by_Coors(x(k),y(k));
 					[dis_x(k),dis_y(k)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi,Yita...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
 				end												      
 			end
@@ -373,11 +394,11 @@ for i = 1:1
 				%计算支撑剂中心坐标变形后的坐标
 				[Kesi_Up,Yita_Up] = Cal_KesiYita_by_Coors(old_Coor_x_Up,old_Coor_y_Up);
 				[dis_x_Up,dis_y_Up] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi_Up,Yita_Up...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip);
 				[Kesi_Low,Yita_Low] = Cal_KesiYita_by_Coors(old_Coor_x_Low,old_Coor_y_Low);
 				[dis_x_Low,dis_y_Low] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi_Low,Yita_Low...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip);
 				%真实的支撑剂所在点的位移											  
 				c_dis_x = (dis_x_Up + dis_x_Low)/2;			
@@ -439,7 +460,6 @@ for i = 1:1
 	end
 	axis equal; 
 
-	
 	% Save pictures.
     if i == 1
 	    Save_Picture(c_figure,Full_Pathname,'field_value')

@@ -1,6 +1,16 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function [Kesi,Yita] = Cal_KesiYita_by_Coors(X,Y)
 % This function calculate the local coordinates kesi and yita by the coordinates of the point inside the element.
@@ -31,7 +41,9 @@ b2 = 0.25 * ( y1-y2+y3-y4);
 b3 = 0.25 * (-y1-y2+y3+y4);
 b4 = 0.25 * ( y1+y2+y3+y4);
 
-% ----------- Option 1 ----------------------------------
+% ----------------------------------
+% ----------- Option 1 -------------
+% ----------------------------------
 %options = optimoptions('fsolve','Display','off','TolFun',1e-10);  % For version higher than Matlab R2012
 options = optimset('Display','off','TolFun',1e-10);       % For version lower than Matlab R2012
 
@@ -41,7 +53,9 @@ pp=fsolve(Eq, [0 0],options);
 Kesi=pp(1);
 Yita=pp(2);
 
-% ----------- Option 2: can not be compiled into exe ----
+% ------------------------------------------------------------
+% ----------- Option 2: can not be compiled into exe ---------
+% ------------------------------------------------------------
 % syms kesi yita;
 % [kesi,yita] = solve(a4 + a3*yita + a1*kesi + a2*kesi*yita -X,b4 + b3*yita + b1*kesi + b2*kesi*yita -Y,kesi,yita);
 

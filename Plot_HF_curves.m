@@ -1,8 +1,19 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function Plot_HF_curves(POST_Substep)
+%水力压裂分析曲线绘制相关.
 
 global Key_PLOT Full_Pathname Num_Node Num_Foc_x Num_Foc_y Foc_x Foc_y
 global num_Crack Key_Dynamic Real_Iteras Real_Sub Key_Contour_Metd
@@ -14,7 +25,7 @@ global Plot_Tan_Aper_Curves  Plot_Wpnp_Curves Plot_Wphp_Curves
 %按行读取文件（适用于多条裂纹）
 if Plot_Pressure_Curves==1
     if exist([Full_Pathname,'.cpre_',num2str(Num_Step_to_Plot)], 'file') ==2 
-		disp('    > 读取水压....') 
+		disp('    > Read *.cpre file....') 
 		namefile= [Full_Pathname,'.cpre_',num2str(POST_Substep)];
 		data=fopen(namefile,'r'); 
 		lineNum = 0;
@@ -27,11 +38,13 @@ if Plot_Pressure_Curves==1
 			num_CalP_each_Crack(lineNum) = c_num;  %每条裂纹的计算点数目
 		end
 		fclose(data); 
+	else
+	    return
 	end
 end
 if Plot_Tan_Aper_Curves==1
     if exist([Full_Pathname,'.ctap_',num2str(Num_Step_to_Plot)], 'file') ==2 
-		disp('    > 读取切向开度....'); 
+		disp('    > Read *.ctap file....'); 
 		namefile= [Full_Pathname,'.ctap_',num2str(POST_Substep)];
 		data=fopen(namefile,'r'); 
 		lineNum = 0;
@@ -43,11 +56,13 @@ if Plot_Tan_Aper_Curves==1
 			num_CalP_each_Crack(lineNum) = c_num;  %每条裂纹的计算点数目
 		end
 		fclose(data); 
+	else
+	    return
 	end
 end
 if Plot_Velocity_Curves==1
     if exist([Full_Pathname,'.cvel_',num2str(Num_Step_to_Plot)], 'file') ==2  
-		disp('    > 读取流速....'); 
+		disp('    > Read *.cvel file....'); 
 		namefile= [Full_Pathname,'.cvel_',num2str(POST_Substep)];
 		data=fopen(namefile,'r'); 
 		lineNum = 0;
@@ -59,12 +74,14 @@ if Plot_Velocity_Curves==1
 			num_CalP_each_Crack(lineNum) = c_num;  %每条裂纹的计算点数目
 		end
 		fclose(data); 
+	else
+	    return
 	end
 end
 
 if Plot_Quantity_Curves==1
 	if exist([Full_Pathname,'.cqua_',num2str(Num_Step_to_Plot)], 'file') ==2  
-		disp('    > 读取流量....'); 
+		disp('    > Read *.cqua file....'); 
 		namefile= [Full_Pathname,'.cqua_',num2str(POST_Substep)];
 		data=fopen(namefile,'r'); 
 		lineNum = 0;
@@ -76,12 +93,14 @@ if Plot_Quantity_Curves==1
 			num_CalP_each_Crack(lineNum) = c_num;  %每条裂纹的计算点数目
 		end
 		fclose(data); 
+	else
+	    return
 	end
 end
 
 if Plot_Concentr_Curves==1
 	if exist([Full_Pathname,'.ccon_',num2str(Num_Step_to_Plot)], 'file') ==2  
-		disp('    > 读取支撑剂浓度....'); 
+		disp('    > Read *.ccon file....'); 
 		namefile= [Full_Pathname,'.ccon_',num2str(POST_Substep)];
 		data=fopen(namefile,'r'); 
 		lineNum = 0;
@@ -93,12 +112,14 @@ if Plot_Concentr_Curves==1
 			num_CalP_each_Crack(lineNum) = c_num;  %每条裂纹的计算点数目
 		end
 		fclose(data); 
+	else
+	    return
 	end
 end
 
 if Plot_Wpnp_Curves==1
 	if exist([Full_Pathname,'.wpnp_',num2str(Num_Step_to_Plot)], 'file') ==2  
-		disp('    > 读取wpnp....'); 
+		disp('    > Read *.wpnp file....'); 
 		namefile= [Full_Pathname,'.wpnp_',num2str(POST_Substep)];
 		data=fopen(namefile,'r'); 
 		lineNum = 0;
@@ -110,11 +131,13 @@ if Plot_Wpnp_Curves==1
 			num_CalP_each_Crack(lineNum) = c_num;  %每条裂纹的计算点数目
 		end
 		fclose(data); 
+	else
+	    return
 	end
 end
 
 if exist([Full_Pathname,'.apex_',num2str(Num_Step_to_Plot)], 'file') ==2  
-	disp('    > 读取计算点x坐标....') 
+	disp('    > Read *.apex file....') 
 	namefile= [Full_Pathname,'.apex_',num2str(POST_Substep)];
 	data=fopen(namefile,'r'); 
 	lineNum = 0;
@@ -125,10 +148,12 @@ if exist([Full_Pathname,'.apex_',num2str(Num_Step_to_Plot)], 'file') ==2
 		x(lineNum,1:c_num)  = str2num(TemData); 
 	end
 	fclose(data); 
+else
+	return
 end
 
 if exist([Full_Pathname,'.apey_',num2str(Num_Step_to_Plot)], 'file') ==2  
-	disp('    > 读取计算点y坐标....') 
+	disp('    > Read *.apey file....') 
 	namefile= [Full_Pathname,'.apey_',num2str(POST_Substep)];
 	data=fopen(namefile,'r'); 
 	lineNum = 0;
@@ -139,11 +164,13 @@ if exist([Full_Pathname,'.apey_',num2str(Num_Step_to_Plot)], 'file') ==2
 		y(lineNum,1:c_num)  = str2num(TemData); 
 	end
 	fclose(data); 
+else
+	return
 end
 
 if Plot_Aperture_Curves==1
     if exist([Full_Pathname,'.cape_',num2str(Num_Step_to_Plot)], 'file') ==2 
-		disp('    > 读取开度....'); 
+		disp('    > Read *.cape file....'); 
 		namefile= [Full_Pathname,'.cape_',num2str(POST_Substep)];
 		data=fopen(namefile,'r'); 
 		lineNum = 0;
@@ -155,10 +182,12 @@ if Plot_Aperture_Curves==1
 			num_CalP_each_Crack(lineNum) = c_num;  %每条裂纹的计算点数目
 		end
 		fclose(data); 
+	else
+	    return
 	end
 end
-%计算计算点对应的裂纹长度
 
+%计算计算点对应的裂纹长度
 for i= 1:num_Crack(Num_Step_to_Plot)
 	for j=1:num_CalP_each_Crack(i)
 	    for k=1:j
@@ -171,7 +200,8 @@ for i= 1:num_Crack(Num_Step_to_Plot)
 	end
 end
 
-if exist([Full_Pathname,'.cpre_',num2str(Num_Step_to_Plot)], 'file') ==2 
+if exist([Full_Pathname,'.cpre_',num2str(Num_Step_to_Plot)], 'file') ==2  | ...
+   exist([Full_Pathname,'.cape_',num2str(Num_Step_to_Plot)], 'file') ==2 
 	% -----------------------------------
 	% 绘制各条裂纹的曲线(水力压裂相关)
 	% -----------------------------------

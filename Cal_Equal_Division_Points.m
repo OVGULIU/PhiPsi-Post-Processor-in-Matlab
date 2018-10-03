@@ -1,12 +1,22 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function [Div_Points,Offsetted_D_P_Up,Offsetted_D_P_Down] = ...
         Cal_Equal_Division_Points(Num_Diversion,Line_AB,offset_delta,Key_Include_Endpoint)
 % Get the equal diversion points of line AB, then offset them by a small delta.
 % Diversion point are arranged from A to B.
-% Diversion points.
+
 a_x = Line_AB(1,1);
 a_y = Line_AB(1,2);
 b_x = Line_AB(2,1);
@@ -28,11 +38,9 @@ if Key_Include_Endpoint==1
 	Div_Points(num_ttt+2,:) = [b_x b_y];
 end
 
-% Offsetted diversion points.
 theta = atan2(b_y-a_y,b_x-a_x);
 
 % Offset endpoints.
-% *---------------*    to    *----------*
 Div_Points(1,1) = Div_Points(1,1)+offset_delta*cos(theta);
 Div_Points(1,2) = Div_Points(1,2)+offset_delta*sin(theta);
 

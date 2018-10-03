@@ -1,19 +1,48 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
-%-------------------------------------------------------------------
-%--------------------- PhiPsi_Post_Plot ----------------------------
-%-------------------------------------------------------------------
-
-%---------------- Start and define global variables ----------------
+% Start and define global variables
 global Key_Dynamic Version Num_Gauss_Points 
 global Filename Work_Dirctory Full_Pathname num_Crack
 global Num_Processor Key_Parallel Max_Memory POST_Substep
 global tip_Order split_Order vertex_Order junction_Order    
 global Key_PLOT Key_POST_HF Num_Crack_HF_Curves
 global Plot_Aperture_Curves Plot_Pressure_Curves Num_Step_to_Plot
-global Key_TipEnrich Key_HF
+global Key_TipEnrich
+global Key_Data_Format
+
+% Get the full name of files.
+Full_Pathname = [Work_Dirctory,'\',Filename];
+
+%获得分析类型等数据
+if exist([Full_Pathname,'.post'], 'file') ==2 
+    file_post = fopen([Full_Pathname,'.post']);
+	lineNum = 0;
+	while ~feof(file_post)
+		lineNum = lineNum+1;
+		TemData = fgetl(file_post);
+		if lineNum==2 
+			Tem_Info = str2num(TemData);
+		end
+	end
+	fclose(file_post); 
+	Analysis_type       = Tem_Info(1);   %分析类型
+    Key_TipEnrich       = Tem_Info(2);   %裂尖增强类型
+	Key_Data_Format     = Tem_Info(3);   %保存的数据的类型
+	Key_Heaviside_Value = Tem_Info(4);   %Value keyword of Heaviside enrichmenet function:-1 (1 and -1) or 0 (1 and 0)
+    Key_Hole_Value      = Tem_Info(5);   %Value keyword of Hole enrichmenet function:-1 (1 and -1) or 0 (1 and 0)
+end
 
 % 如果Num_Step_to_Plot = -999,则程序自动寻找最后一步的稳定计算结果并后处理
 if Num_Step_to_Plot == -999
@@ -33,10 +62,6 @@ end
 disp(['    ---#---#---#---#---#---#---#---#---#---#---']) 
 disp(['    Attention :: Results number to plot: ',num2str(Num_Step_to_Plot)])
 disp(['    ---#---#---#---#---#---#---#---#---#---#---']) 
-disp(['    ']) 
-if Key_HF==1
-    disp(['    HF:    yes'])   %显示是否是HF分析后处理
-end
 disp(['    ']) 
 
 % Get the full name of files.
@@ -78,6 +103,7 @@ Cclock=clock;
 disp([' >> End time is ',num2str(Cclock(2)),'/',num2str(Cclock(3)),'/',num2str(Cclock(1))...
      ,' ',num2str(Cclock(4)),':',num2str(Cclock(5)),':',num2str(round(Cclock(6))),'.'])
 	 
+disp([' >> Total elapsed time is ',num2str(toc),' s, i.e. ',num2str(toc/60),' mins.'])
 % Stop log file.
 diary off;
 

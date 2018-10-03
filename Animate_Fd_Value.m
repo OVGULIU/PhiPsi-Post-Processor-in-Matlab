@@ -1,6 +1,16 @@
-% Written By: Shi Fang, 2016
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function Animate_Fd_Value(Real_num_iteration)
 % 绘制场问题场变量云图.
@@ -13,9 +23,8 @@ global aveg_area_ele Time_Delay delt_time_NewMark Num_Contourlevel
 global Min_X_Coor Max_X_Coor Min_Y_Coor Max_Y_Coor
 global Key_Ani_Ave Width_Crack Color_Crack Key_Animation
 global Num_Gauss_Points Key_Integral_Sol
-global Num_Accuracy_Contour Key_Contour_Metd Key_HF
+global Num_Accuracy_Contour Key_Contour_Metd
 global Output_Freq Color_Mesh
-global Key_Plot_Pressure Key_Plot_Quantity
 global Color_Contourlevel Key_Flipped_Gray Itera_Num Itera_HF_Time
 global Na_Crack_X Na_Crack_Y num_Na_Crack Key_HF_Analysis
 global frac_zone_min_x frac_zone_max_x frac_zone_min_y frac_zone_max_y
@@ -26,6 +35,7 @@ global num_Poly_Inclusion Poly_Incl_Coor_x Poly_Incl_Coor_y
 global Field_Flux_x Field_Flux_y
 global max_area_ele
 global Max_Flux_x Min_Flux_x Max_Flux_y Min_Flux_y Max_Flux Key_Time_String
+global Key_Data_Format
 
 disp('    Generating animations of field value......')
 
@@ -39,7 +49,14 @@ if (Key_Animation(4)==1 | Key_Animation(4)==3) & Key_Ani_Ave(4)==1
 	for i=1:Real_num_iteration
 	    if mod(i,Output_Freq)==0
 		    i_output=i_output+1;
-			Field_Value = load([Full_Pathname,'.fdvl_',num2str(Itera_Num(i))]);
+			if Key_Data_Format==1 
+				Field_Value = load([Full_Pathname,'.fdvl_',num2str(Itera_Num(i))]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.fdvl_',num2str(Itera_Num(i))],'rb');
+				[Field_Value,cc_count]   = fread(c_file,inf,'double');
+				fclose(c_file);
+			end
+	
 			if i_output==1
 				MaxValue =max(Field_Value(1:Num_Node));
 				MinValue =min(Field_Value(1:Num_Node));
@@ -92,8 +109,20 @@ i_output=0;
 for i=1:Real_num_iteration
     if mod(i,Output_Freq)==0
 	    i_output = i_output + 1;
-		disp(['    > Plotting and saving field value contours of frame ',num2str(i),'......']) 
-		Field_Value = load([Full_Pathname,'.fdvl_',num2str(Itera_Num(i))]);
+        % Read displacement file.
+        if exist([Full_Pathname,'.fdvl_',num2str(Itera_Num(i))], 'file') ==2
+			if Key_Data_Format==1 
+				Field_Value = load([Full_Pathname,'.fdvl_',num2str(Itera_Num(i))]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.fdvl_',num2str(Itera_Num(i))],'rb');
+				[Field_Value,cc_count]   = fread(c_file,inf,'double');
+				fclose(c_file);
+			end
+			disp(['    > Plotting and saving field value contours of frame ',num2str(i),'......']) 
+		else
+		    disp(['    WARNING :: can not find *.fdcl file']) 
+			break
+		end
 		scale = Key_PLOT(5,6);
 	
 		% Get resample coors.

@@ -1,10 +1,19 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function Read_Geo3D
-% This function read information about nodes and elements from *node and *elem files which can be obtained 
-% by ansys mac file, Ansys2FraxFEM.mac.
+% This function read information about nodes and elements from *node and *elem files which can be obtained by ansys mac file, Ansys2PhiPsi_3D.mac.
 % After the reading, the extreme values will be calculated and stored as global values.
 
 global Full_Pathname Node_Coor Elem_Node Bou_x Bou_y Bou_z Foc_x Foc_y Foc_z

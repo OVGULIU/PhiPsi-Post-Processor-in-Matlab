@@ -1,6 +1,16 @@
-% Written By: Shi Fang, 2016
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 global Key_Dynamic Version Num_Gauss_Points 
 global Filename Work_Dirctory Full_Pathname num_Crack Defor_Factor
@@ -13,6 +23,10 @@ global Na_Crack_X Na_Crack_Y num_Na_Crack Itera_HF_Time Key_HF_Analysis
 global num_Hole Hole_Coor   
 global num_Circ_Inclusion num_Poly_Inclusion
 global Analysis_type
+global Key_Heaviside_Value 
+global Key_Hole_Value 
+global Key_Data_Format
+
 
 disp(['    ---#---#---#---#---#---#---#---#---#---#---']) 
 disp(['    Attention :: Results number to plot: ',num2str(Num_Step_to_Plot)])
@@ -31,10 +45,15 @@ if exist([Full_Pathname,'.post'], 'file') ==2
 		lineNum = lineNum+1;
 		TemData = fgetl(file_post);
 		if lineNum==2  %第一行   
-			Analysis_type = str2num(TemData);
+			Tem_Info = str2num(TemData);
 		end
 	end
 	fclose(file_post); 
+	Analysis_type       = Tem_Info(1);   %分析类型
+    Key_TipEnrich       = Tem_Info(2);   %裂尖增强类型
+	Key_Data_Format     = Tem_Info(3);   %保存的数据的类型
+	Key_Heaviside_Value = Tem_Info(4);   %Value keyword of Heaviside enrichmenet function:-1 (1 and -1) or 0 (1 and 0)
+    Key_Hole_Value      = Tem_Info(5);   %Value keyword of Hole enrichmenet function:-1 (1 and -1) or 0 (1 and 0)
 end
 % 如果是分子动力学模拟(*.post文件中存储的分析类型号=21),则很简单,直接调用
 if Analysis_type==21
@@ -42,30 +61,33 @@ if Analysis_type==21
 	%退出该子程序
 	return
 end
-
-%水力压裂分析
-if Key_HF==1
-    disp(['    HF:    yes'])   %显示是否是HF分析后处理
+% 如果是近场动力学模拟(*.post文件中存储的分析类型号=31),则很简单,直接调用
+if Analysis_type==31
+	Animate_PD
+	%退出该子程序
+	return
 end
-disp(['    ']) 
-
 % Read input geometry files.
 Read_Geo
 disp(['  '])    
 
 % 如果Num_Step_to_Plot = -999,则程序自动寻找最后一步的稳定计算结果并后处理
+
 if Num_Step_to_Plot == -999
     for i_Check =1:10000
 	    if exist([Full_Pathname,'.disn_',num2str(i_Check)], 'file') ==2 
 	        Num_Step_to_Plot = i_Check;
 	    end
 	end
-    for i_Check =1:10000
-	    if exist([Full_Pathname,'.fdvl_',num2str(i_Check)], 'file') ==2 
-	        Num_Step_to_Plot = i_Check;
-	    end
+	if Key_PLOT(5,1) ~=0 
+		for i_Check =1:10000
+			if exist([Full_Pathname,'.fdvl_',num2str(i_Check)], 'file') ==2 
+				Num_Step_to_Plot = i_Check;
+			end
+		end
 	end
 end
+
 
 %如果Num_Step_to_Plot=-999,且没有计算结果,则终止程序
 if Num_Step_to_Plot==-999
@@ -111,6 +133,7 @@ else
         Itera_Num(i) = i;
 	end
 end
+
 % Check if result files exist.
 if exist([Full_Pathname,'.disn_',num2str(Itera_Num(Num_Step_to_Plot))], 'file') ~=2 && exist([Full_Pathname,'.fdvl_',num2str(Itera_Num(Num_Step_to_Plot))], 'file') ~=2
     disp(' >> Error :: No result files found, post-processor terminated.') 
@@ -212,10 +235,6 @@ Cclock=clock;
 % Display end time.
 disp([' >> End time is ',num2str(Cclock(2)),'/',num2str(Cclock(3)),'/',num2str(Cclock(1))...
      ,' ',num2str(Cclock(4)),':',num2str(Cclock(5)),':',num2str(round(Cclock(6))),'.'])
-	 
+disp([' >> Total elapsed time is ',num2str(toc),' s, i.e. ',num2str(toc/60),' mins.'])
 % Stop log file.
 diary off;
-
-%-------------------------------------------------------------------
-%------------------ The end of FraxFEM_Post_Plot --------------------
-%-------------------------------------------------------------------

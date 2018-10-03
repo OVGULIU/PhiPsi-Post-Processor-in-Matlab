@@ -1,9 +1,19 @@
-% Written By: Shi Fang, 2017
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function Plot_MD
-% 分子动力学模拟相关.
+% 分子动力学模拟相关的后处理.
 global Key_PLOT
 global Size_Font 
 global Full_Pathname Num_Step_to_Plot
@@ -12,26 +22,7 @@ global Color_Backgro_Mesh_5 Color_Backgro_Mesh_6 Color_Backgro_Mesh_7
 global Color_Backgro_Mesh_8 Color_Backgro_Mesh_9 Color_Backgro_Mesh_10
 global box_zone_min_x box_zone_max_x box_zone_min_y box_zone_max_y
 
-
-%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-% Preparing.
-%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 disp(['      ----- Read files......'])
-
-% if Num_Step_to_Plot == -999
-    % for i_Check =1:5000
-	    % if exist([Full_Pathname,'.mdco_',num2str(i_Check)], 'file') ==2 
-	        % Num_Step_to_Plot = i_Check;
-	    % end
-	% end
-% end
-
-% if Num_Step_to_Plot==-999
-	% disp(' >> Error :: No result files found, post-processor terminated.') 
-	% Error_Message
-% end
-
-
 
 % 读取Box文件
 if exist([Full_Pathname,'.mdbx'], 'file') ==2
@@ -56,7 +47,6 @@ end
 
 % 如果存在时间步文件
 if  exist([Full_Pathname,'.hftm'], 'file') ==2 
-	%读取水力压裂分析各破裂步对应的总的迭代次数
 	disp('    > Reading hftm file....') 
 	namefile= [Full_Pathname,'.hftm'];
 	data=fopen(namefile,'r'); 
@@ -72,12 +62,12 @@ if  exist([Full_Pathname,'.hftm'], 'file') ==2
 		end
 	end
 	fclose(data); 
-	%最大破裂步数
-	Max_Frac = max(ttt_DATA(1:num_Iter,2));
+	%最大计算步数
+	Max_Steps = max(ttt_DATA(1:num_Iter,2));
 	%提取每个破裂步对应的迭代步号
-	for i_Fra = 1:Max_Frac
+	for i_Fra = 1:Max_Steps
 		Itera_Num(i_Fra) = 0;
-		%所有破裂步间循环
+		%所有计算步间循环
 		for i_ter = 1:num_Iter
 			if ttt_DATA(i_ter,2)== i_Fra &&  ttt_DATA(i_ter,3) > Itera_Num(i_Fra)
 				Itera_Num(i_Fra) = ttt_DATA(i_ter,3);
@@ -93,9 +83,7 @@ else
 end
 
 num_Iter = num_Iter +1;
-%Itera_Num
 
-%-999
 if Num_Step_to_Plot == -999
     Num_Step_to_Plot = Itera_Num(num_Iter);
 end
@@ -125,18 +113,14 @@ if Key_PLOT(6,2) >= 1
 	end
 end
 
-%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 % New figure.
-%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 Tools_New_Figure
 hold on;
 title('\it Position of particles','FontName','Times New Roman','FontSize',Size_Font)
 axis off; axis equal;
 axis([box_zone_min_x box_zone_max_x box_zone_min_y box_zone_max_y]);
 
-%<<<<<<<<<<<<<<<<<
 % 绘制轨迹线.
-%<<<<<<<<<<<<<<<<<
 if Key_PLOT(6,2) >= 1
     disp(['      ----- Plotting moving path......'])  
 	if c_i>=2
@@ -156,14 +140,13 @@ if Key_PLOT(6,2) >= 1
 			all_c_y(1,1:num_molecule) = MD_Coor(1:num_molecule,3);
 			all_c_y(2,1:num_molecule) = Old_MD_Coor(1:num_molecule,3);
 			
-			line(all_c_x,all_c_y,'LineWidth',1.0,'Color','blue');
+			line(all_c_x,all_c_y,'LineWidth',1.0,'Color','blue');   %蓝色
+			% line(all_c_x,all_c_y,'LineWidth',1.0,'Color',[176/255,224/255,230/255]); %浅蓝色
 		end
 	end
 end
 
-%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 % 绘制分子.
-%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 if Key_PLOT(6,1) == 1
     if exist([Full_Pathname,'.mdco_',num2str(Num_Step_to_Plot)], 'file') ==2  
 		disp(['      ----- Plotting positions of particles...'])
@@ -174,30 +157,55 @@ if Key_PLOT(6,1) == 1
 	end
 end
 
-%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-%         绘制Box
-%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+% 绘制Box
 if Key_PLOT(6,15)==1 
-	%如果定义了破裂区
 	disp(['      ----- Plotting box......'])  
+	
+	% 为了防止靠近边界的地方画不出来
+	c_L = box_zone_max_x - box_zone_min_x;
+	c_H = box_zone_max_y - box_zone_min_y;
+	box_zone_min_x = box_zone_min_x + c_L*0.01;
+	box_zone_max_x = box_zone_max_x - c_L*0.01;
+	box_zone_min_y = box_zone_min_y + c_H*0.01;
+	box_zone_max_y = box_zone_max_y - c_H*0.01;
+	
     c_x = [box_zone_min_x,box_zone_max_x];
 	c_y = [box_zone_min_y,box_zone_min_y];
-	line(c_x,c_y,'LineWidth',1.5,'Color','green')
+	line(c_x,c_y,'LineWidth',1.5,'Color','black')
     c_x = [box_zone_max_x,box_zone_max_x];
     c_y = [box_zone_min_y,box_zone_max_y];
-	line(c_x,c_y,'LineWidth',1.5,'Color','green')
+	line(c_x,c_y,'LineWidth',1.5,'Color','black')
     c_x = [box_zone_max_x,box_zone_min_x];
 	c_y = [box_zone_max_y,box_zone_max_y];
-	line(c_x,c_y,'LineWidth',1.5,'Color','green')
+	line(c_x,c_y,'LineWidth',1.5,'Color','black')
     c_x = [box_zone_min_x,box_zone_min_x];
 	c_y = [box_zone_max_y,box_zone_min_y];
-	line(c_x,c_y,'LineWidth',1.5,'Color','green')
+	line(c_x,c_y,'LineWidth',1.5,'Color','black')
+	% 绘制5x5的标记线
+	if Key_PLOT(6,9)==1 
+		disp(['      ----- Plotting maker lines......'])  
+		line_width_marker = 0.5;
+		for i_marker_horizon =1:4
+		    delta_H = c_H/5.0;
+			c_x = [box_zone_min_x,box_zone_max_x];
+			c_y = [box_zone_min_y+delta_H*i_marker_horizon,box_zone_min_y+delta_H*i_marker_horizon];
+			line(c_x,c_y,'LineWidth',line_width_marker,'Color',[192/255,192/255, 192/255])
+		end
+		for i_marker_vert =1:4
+		    delta_L = c_L/5.0;
+			c_x = [box_zone_min_x+delta_L*i_marker_vert,box_zone_min_x+delta_L*i_marker_vert];
+			c_y = [box_zone_min_y,box_zone_max_y];
+			line(c_x,c_y,'LineWidth',line_width_marker,'Color',[192/255,192/255, 192/255])
+		end		
+	end	
 end
 
 
-%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-%        Save pictures.
-%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+% Save pictures.
 Save_Picture(c_figure,Full_Pathname,'mdco')
 
 % 输出完成信息
@@ -206,6 +214,7 @@ disp('    Plot completed.')
 disp(' ')
 
 Cclock=clock;
+
 % Display end time.
 disp([' >> End time is ',num2str(Cclock(2)),'/',num2str(Cclock(3)),'/',num2str(Cclock(1))...
      ,' ',num2str(Cclock(4)),':',num2str(Cclock(5)),':',num2str(round(Cclock(6))),'.'])

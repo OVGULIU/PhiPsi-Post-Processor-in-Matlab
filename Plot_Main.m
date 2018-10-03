@@ -1,6 +1,16 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function Plot_Main(POST_Substep)
 % This function plots mesh, contours, vectors and so on.
@@ -17,7 +27,12 @@ global Yes_Field_Problem
 global Field_Boundary_Value
 global Field_Boundary_Qn
 global Field_Flux_x Field_Flux_y
-
+global Cross_Point_RABCD
+global Key_Data_Format
+global num_Cross Cross_Coor Enriched_Node_Type_Cross POS_Cross Elem_Type_Cross Node_Cross_elem
+global Arc_Crack_Coor Yes_Arc_Crack aveg_area_ele
+global num_HC HC_Coor Enriched_Node_Type_HC Node_HC_elem POS_HC Elem_Type_HC
+	
 scale = Key_PLOT(2,6);
 Yes_Field_Problem = 0;
 % Get the number of the substep for post process.
@@ -57,7 +72,19 @@ end
 % Read displacement file.
 if exist([Full_Pathname,'.disn_',num2str(POST_Substep)], 'file') ==2
     disp('    > Reading displacement file....') 
-    DISP= load([Full_Pathname,'.disn_',num2str(POST_Substep)]);
+	if Key_Data_Format==1 
+        DISP   = load([Full_Pathname,'.disn_',num2str(POST_Substep)]);
+	elseif Key_Data_Format==2  %Binary
+	    c_file = fopen([Full_Pathname,'.disn_',num2str(POST_Substep)],'rb');
+		[cc_DISP,cc_count]   = fread(c_file,inf,'double');
+		fclose(c_file);
+		%转换成Matlab中的数据格式
+		for ccc_i=1:cc_count/2
+		    DISP(ccc_i,1) = ccc_i;
+			DISP(ccc_i,2) = cc_DISP(ccc_i*2-1);
+			DISP(ccc_i,3) = cc_DISP(ccc_i*2);
+		end
+	end
 else
     DISP =[];
 end
@@ -65,7 +92,14 @@ end
 % Read field value file.
 if exist([Full_Pathname,'.fdvl_',num2str(POST_Substep)], 'file') ==2
     disp('    > Reading field value file....') 
-    Field_Value= load([Full_Pathname,'.fdvl_',num2str(POST_Substep)]);
+	if Key_Data_Format==1 
+        Field_Value= load([Full_Pathname,'.fdvl_',num2str(POST_Substep)]);
+	elseif Key_Data_Format==2  %Binary
+	    c_file = fopen([Full_Pathname,'.fdvl_',num2str(POST_Substep)],'rb');
+		[Field_Value,cc_count]   = fread(c_file,inf,'double');
+		fclose(c_file);
+	end
+	
 	Yes_Field_Problem = 1;
 else
     Field_Value=[];
@@ -87,7 +121,7 @@ else
     Field_Flux_y=[];
 end
 
-% 场问题边值边界条件.
+% 场问题边值边界条件文件.
 if exist([Full_Pathname,'.fbvl'], 'file') ==2
     disp('    > Reading field value file....') 
     Field_Boundary_Value= load([Full_Pathname,'.fbvl']);
@@ -95,7 +129,7 @@ else
     Field_Boundary_Value=[];
 end
 
-% 场问题边界流量.
+% 场问题边界流量文件.
 if exist([Full_Pathname,'.fbqn'], 'file') ==2
     disp('    > Reading field value file....') 
     Field_Boundary_Qn= load([Full_Pathname,'.fbqn']);
@@ -135,36 +169,183 @@ if num_Crack(POST_Substep) ~= 0
 	fclose(file_Crack_X);
 	fclose(file_Crack_Y);
 	
+	disp('    > Reading celc file....') 
+	if Key_Data_Format==1 
+		tem_Coors_Element_Crack = load([Full_Pathname,'.celc_',num2str(POST_Substep)]);
+	elseif Key_Data_Format==2  %Binary
+	    c_file = fopen([Full_Pathname,'.celc_',num2str(POST_Substep)],'rb');
+		[cc_tem_Coors_Element_Crack,cc_count]   = fread(c_file,inf,'double');
+		fclose(c_file);
+		%转换成Matlab中的数据格式
+		for ccc_i=1:cc_count/4
+			tem_Coors_Element_Crack(ccc_i,1) = cc_tem_Coors_Element_Crack(ccc_i*4-3);
+			tem_Coors_Element_Crack(ccc_i,2) = cc_tem_Coors_Element_Crack(ccc_i*4-2);
+			tem_Coors_Element_Crack(ccc_i,3) = cc_tem_Coors_Element_Crack(ccc_i*4-1);
+			tem_Coors_Element_Crack(ccc_i,4) = cc_tem_Coors_Element_Crack(ccc_i*4);
+		end
+	end
+	num_ele = size(tem_Coors_Element_Crack,1)/num_Crack(POST_Substep);
+	for i_Cr = 1:num_Crack(POST_Substep)
+	    for i_Ele = 1:num_ele
+	        Coors_Element_Crack(i_Ele,i_Cr,1:4) = tem_Coors_Element_Crack((i_Cr-1)*num_ele + i_Ele,1:4);
+		end
+	end
+	
 	disp('    > Reading ennd file....') 
-	Enriched_Node_Type = load([Full_Pathname,'.ennd_',num2str(POST_Substep)]);
+	if Key_Data_Format==1 
+	    Enriched_Node_Type = load([Full_Pathname,'.ennd_',num2str(POST_Substep)]);
+	elseif Key_Data_Format==2  %Binary
+	    c_file = fopen([Full_Pathname,'.ennd_',num2str(POST_Substep)],'rb');
+		[cc_Enriched_Node_Type,cc_count]   = fread(c_file,inf,'int');
+		fclose(c_file);
+		%转换成Matlab中的数据格式
+		Enriched_Node_Type = (reshape(cc_Enriched_Node_Type,num_Crack(POST_Substep),Num_Node))';
+	end
+	
 	disp('    > Reading posi file....') 
-	POS = load([Full_Pathname,'.posi_',num2str(POST_Substep)]);
+	if Key_Data_Format==1 
+	    POS = load([Full_Pathname,'.posi_',num2str(POST_Substep)]);
+	elseif Key_Data_Format==2  %Binary
+	    c_file = fopen([Full_Pathname,'.posi_',num2str(POST_Substep)],'rb');
+		[cc_POS,cc_count]   = fread(c_file,inf,'int');
+		fclose(c_file);
+		%转换成Matlab中的数据格式
+		POS = (reshape(cc_POS,num_Crack(POST_Substep),Num_Node))';
+	end	
+	
 	disp('    > Reading elty file....');
-	Elem_Type = load([Full_Pathname,'.elty_',num2str(POST_Substep)]);
-	disp('    > Reading celc file....');
-	Coors_Element_Crack = load([Full_Pathname,'.celc_',num2str(POST_Substep)]);
+	if Key_Data_Format==1 
+		Elem_Type = load([Full_Pathname,'.elty_',num2str(POST_Substep)]);
+	elseif Key_Data_Format==2  %Binary
+	    c_file = fopen([Full_Pathname,'.elty_',num2str(POST_Substep)],'rb');
+		[cc_Elem_Type,cc_count]   = fread(c_file,inf,'int');
+		fclose(c_file);
+		%转换成Matlab中的数据格式
+		Elem_Type = (reshape(cc_Elem_Type,num_Crack(POST_Substep),num_ele))';
+	end		
+
+	% size(Coors_Element_Crack)
+	
+	disp('    > Reading crab file....');
+	tem_Cross_Point_RABCD = load([Full_Pathname,'.crab_',num2str(POST_Substep)]); %2017-05-04
+    tem_num_Cross = size(tem_Cross_Point_RABCD,1)/2;
+	if tem_num_Cross ~=0
+        Cross_Point_RABCD(1:tem_num_Cross,1:10,1) = tem_Cross_Point_RABCD(1:2:tem_num_Cross*2,1:10);
+	    Cross_Point_RABCD(1:tem_num_Cross,1:10,2) = tem_Cross_Point_RABCD(2:2:tem_num_Cross*2,1:10);
+	end
+	%size(Ele_Cross_Point_RABCD)
 	
 	if exist([Full_Pathname,'.njel_',num2str(POST_Substep)], 'file') ==2 
 	    disp('    > Reading njel file....');
-	    Node_Jun_elem = load([Full_Pathname,'.njel_',num2str(POST_Substep)]); %Junction增强节点对应的Junction单元号,added on 2016-07-11
+		if Key_Data_Format==1 
+			Node_Jun_elem = load([Full_Pathname,'.njel_',num2str(POST_Substep)]); %Junction增强节点对应的Junction单元�?added on 2016-07-11
+		elseif Key_Data_Format==2  %Binary
+			c_file = fopen([Full_Pathname,'.njel_',num2str(POST_Substep)],'rb');
+			[cc_Node_Jun_elem,cc_count]   = fread(c_file,inf,'int');
+			fclose(c_file);
+			%转换成Matlab中的数据格式
+			Node_Jun_elem = (reshape(cc_Node_Jun_elem,num_Crack(POST_Substep),Num_Node))';
+		end	
 	else
 	    Node_Jun_elem=[];
 	end
+	
+	if exist([Full_Pathname,'.njhl_',num2str(POST_Substep)], 'file') ==2 
+	    disp('    > Reading njel file....');
+		if Key_Data_Format==1 
+			Node_Jun_Hole = load([Full_Pathname,'.njhl_',num2str(POST_Substep)]); %Junction增强节点对应的Junction单元�?added on 2016-07-11
+		elseif Key_Data_Format==2  %Binary
+			c_file = fopen([Full_Pathname,'.njhl_',num2str(POST_Substep)],'rb');
+			[cc_Node_Jun_Hole,cc_count]   = fread(c_file,inf,'int');
+			fclose(c_file);
+			%转换成Matlab中的数据格式
+			Node_Jun_Hole = (reshape(cc_Node_Jun_Hole,num_Crack(POST_Substep),Num_Node))';
+		end			
+	else
+	    Node_Jun_Hole=[];
+	end
+	
+	if exist([Full_Pathname,'.ncel_',num2str(POST_Substep)], 'file') ==2 
+	    disp('    > Reading ncel file....');
+	    Node_Cross_elem = load([Full_Pathname,'.ncel_',num2str(POST_Substep)]); 
+	else
+	    Node_Cross_elem=[];
+	end
+	
 	disp('    > Reading celv file....');
-	Coors_Vertex        = load([Full_Pathname,'.celv_',num2str(POST_Substep)]);
+	if Key_Data_Format==1 
+		Coors_Vertex        = load([Full_Pathname,'.celv_',num2str(POST_Substep)]);
+	elseif Key_Data_Format==2  %Binary
+		c_file = fopen([Full_Pathname,'.celv_',num2str(POST_Substep)],'rb');
+		[cc_Coors_Vertex,cc_count]   = fread(c_file,inf,'double');
+		fclose(c_file);
+		%转换成Matlab中的数据格式
+		Coors_Vertex = (reshape(cc_Coors_Vertex,2,num_ele))';
+	end
+	
 	disp('    > Reading celj file....');
-	Coors_Junction      = load([Full_Pathname,'.celj_',num2str(POST_Substep)]);
+	if Key_Data_Format==1 
+		tem_Coors_Junction      = load([Full_Pathname,'.celj_',num2str(POST_Substep)]);
+	elseif Key_Data_Format==2  %Binary
+	    c_file = fopen([Full_Pathname,'.celj_',num2str(POST_Substep)],'rb');
+		[cc_tem_Coors_Junction,cc_count]   = fread(c_file,inf,'double');
+		fclose(c_file);
+		%转换成Matlab中的数据格式
+		for ccc_i=1:cc_count/4
+			tem_Coors_Junction(ccc_i,1) = cc_tem_Coors_Junction(ccc_i*4-3);
+			tem_Coors_Junction(ccc_i,2) = cc_tem_Coors_Junction(ccc_i*4-2);
+			tem_Coors_Junction(ccc_i,3) = cc_tem_Coors_Junction(ccc_i*4-1);
+			tem_Coors_Junction(ccc_i,4) = cc_tem_Coors_Junction(ccc_i*4);
+		end
+	end
+	
+	
+	
+	num_ele = size(tem_Coors_Element_Crack,1)/num_Crack(POST_Substep);
+	for i_Cr = 1:num_Crack(POST_Substep)
+	    for i_Ele = 1:num_ele
+	        Coors_Junction(i_Ele,i_Cr,1:4) = tem_Coors_Junction((i_Cr-1)*num_ele + i_Ele,1:4);
+		end
+	end
+	% size(Coors_Junction)
+	
 	disp('    > Reading celt file....');
-	Coors_Tip           = load([Full_Pathname,'.celt_',num2str(POST_Substep)]);
+	if Key_Data_Format==1 
+		Coors_Tip           = load([Full_Pathname,'.celt_',num2str(POST_Substep)]);
+	elseif Key_Data_Format==2  %Binary
+		c_file = fopen([Full_Pathname,'.celt_',num2str(POST_Substep)],'rb');
+		[cc_Coors_Tip,cc_count]   = fread(c_file,inf,'double');
+		fclose(c_file);
+		%转换成Matlab中的数据格式
+		Coors_Tip = (reshape(cc_Coors_Tip,2,num_ele))';
+	end
+	
+	
 	disp('    > Reading ctty file....');
 	Crack_Tip_Type      = load([Full_Pathname,'.ctty_',num2str(POST_Substep)]);
+	
 else
     Crack_X = [];   Crack_Y = [];
 	Enriched_Node_Type = [];
 	Elem_Type = [];x_cr_tip_nodes=[];y_cr_tip_nodes=[];
 	POS = []; Coors_Element_Crack= [];Coors_Vertex= [];
     Coors_Junction= []; Coors_Tip= []; Elem_Type= [];
-	Crack_Tip_Type= [];Node_Jun_elem=[];
+	Crack_Tip_Type= [];Node_Jun_elem=[];Node_Cross_elem=[];Node_Jun_Hole=[];
+end
+
+% Read coordinates of arc (Arc_Crack_Coor(,,1:11)) crack if arc crack exist, 2017-07-17.
+if num_Crack(POST_Substep) ~= 0 && Yes_Arc_Crack==1
+    disp('    > Reading coordinates of arc cracks....') 
+	file_Arc = fopen([Full_Pathname,'.arcc_',num2str(POST_Substep)]);
+	for i=1:num_Crack(POST_Substep)
+	    nPt = size(Crack_X{i},2);
+		for j=1:11
+		    Arc_Crack_Coor(i,1:nPt-1,j)= str2num(fgetl(file_Arc));
+		end
+	end
+	fclose(file_Arc);
+else 
+    Arc_Crack_Coor(1:1000,1:1000,1:11) = 0.0;
 end
 
 % Read coordinates and other info of holes if holes exist.
@@ -183,7 +364,45 @@ if num_Hole ~= 0
 	Elem_Type_Hl = load([Full_Pathname,'.elth_',num2str(POST_Substep)]);
 end
 
-% 读取圆形夹杂的坐标.
+% Read coordinates and other info of crosses if cross exist.
+if num_Cross ~= 0
+	disp('    > Reading coordinates of cross....') 
+	file_Cross = fopen([Full_Pathname,'.cscr']);
+	for i=1:num_Cross
+		Cross_Coor(i,1:2)= str2num(fgetl(file_Cross));
+	end
+	fclose(file_Cross);
+	disp('    > Reading enns file of cross....') 
+	Enriched_Node_Type_Cross = load([Full_Pathname,'.enns_',num2str(POST_Substep)]);
+	
+	disp('    > Reading nods file of cross....') 
+	Node_Cross_elem = load([Full_Pathname,'.nods_',num2str(POST_Substep)]);
+	
+	disp('    > Reading poss file of cross....') 
+	POS_Cross = load([Full_Pathname,'.poss_',num2str(POST_Substep)]);
+	disp('    > Reading elts file of cross....');
+	Elem_Type_Cross = load([Full_Pathname,'.elts_',num2str(POST_Substep)]);
+end
+
+% Read coordinates and other info of HC if HC exist.
+if num_HC ~= 0
+	disp('    > Reading coordinates of HC....') 
+	file_HC = fopen([Full_Pathname,'.hccr']);
+	for i=1:num_HC
+		HC_Coor(i,1:2)= str2num(fgetl(file_HC));
+	end
+	fclose(file_HC);
+	disp('    > Reading enns file of HC....') 
+	Enriched_Node_Type_HC = load([Full_Pathname,'.enhc_',num2str(POST_Substep)]);
+	disp('    > Reading nods file of HC....') 
+	Node_HC_elem = load([Full_Pathname,'.nohc_',num2str(POST_Substep)]);
+	disp('    > Reading poss file of HC....') 
+	POS_HC = load([Full_Pathname,'.pohc_',num2str(POST_Substep)]);
+	disp('    > Reading elts file of HC....');
+	Elem_Type_HC = load([Full_Pathname,'.elhc_',num2str(POST_Substep)]);
+end
+
+% 读取圆形夹杂的坐标
 if num_Circ_Inclusion ~= 0
 	disp('    > Reading coordinates of circle inclusions....') 
 	file_Circ_Inclusion = fopen([Full_Pathname,'.jzcr']);
@@ -221,7 +440,7 @@ if num_Poly_Inclusion ~= 0
 	Elem_Type_Incl = load([Full_Pathname,'.eltj_',num2str(POST_Substep)]);
 end
 
-% Read coordinates of natural cracks if natural cracks exist(读取天然裂缝的坐标).
+% Read coordinates of natural cracks if natural cracks exist(读取天然裂缝的坐�?.
 if num_Na_Crack ~= 0
 	disp('    > Reading coordinates of natural cracks....') 
 	file_Na_Crack_X = fopen([Full_Pathname,'.ncrx']);
@@ -239,7 +458,16 @@ end
 % Read enriched nodes of cracks if cracks exist.
 if num_Crack(POST_Substep) ~= 0
 	disp('    > Reading enriched nodes of cracks....') 
-	Post_Enriched_Nodes = load([Full_Pathname,'.ennd_',num2str(POST_Substep)]);
+	
+	if Key_Data_Format==1 
+		Post_Enriched_Nodes = load([Full_Pathname,'.ennd_',num2str(POST_Substep)]);
+	elseif Key_Data_Format==2  %Binary
+	    c_file = fopen([Full_Pathname,'.ennd_',num2str(POST_Substep)],'rb');
+		[cc_Post_Enriched_Nodes,cc_count]   = fread(c_file,inf,'int');
+		fclose(c_file);
+		%转换成Matlab中的数据格式
+		Post_Enriched_Nodes = (reshape(cc_Post_Enriched_Nodes,num_Crack(POST_Substep),Num_Node))';
+	end	
 else
 	Post_Enriched_Nodes =[];
 end
@@ -282,7 +510,7 @@ if ((Key_PLOT(2,1) == 1 & Key_PLOT(2,5) == 2) || ...
     ((Key_PLOT(4,1) == 1 || Key_PLOT(4,1) == 2) & Key_PLOT(4,5) == 2) )  && num_Crack(POST_Substep)~=0
 	disp(['    > Calculating shaped crack points......'])
 	[Shaped_Crack_Points] = Cal_Shaped_Cracks(Crack_X,Crack_Y,POST_Substep,POST_Substep,num_Crack,Crack_Tip_Type,POS,...
-								   Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+								   Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 								   Coors_Vertex,Coors_Junction,Coors_Tip,DISP,scale);
 else
 	Shaped_Crack_Points=[];						   
@@ -290,49 +518,78 @@ end
 
 % Plot deformation.
 if Key_PLOT(2,1)==1
-    Plot_Deformation(DISP,FORCE_Matrix,Boundary_X_Matrix,Boundary_Y_Matrix,Post_Enriched_Nodes...
-	                 ,POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+    Plot_Deformation(DISP,FORCE_Matrix,Boundary_X_Matrix,Boundary_Y_Matrix,Post_Enriched_Nodes,...
+	                 POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 					 Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points,Crushed_element)
 end
 
 % Read nodal average stress file.
 if Key_PLOT(3,1)~=0
     disp('    > Reading nodal average stress file....') 
-    Stress_Matrix = load([Full_Pathname,'.strn_',num2str(POST_Substep)]);
+	%读取节点应力
+	if Key_Data_Format==1 
+		if exist([Full_Pathname,'.strn_',num2str(POST_Substep)], 'file') ==2 
+            Stress_Matrix = load([Full_Pathname,'.strn_',num2str(POST_Substep)]);
+		else
+		    Stress_Matrix =[];
+		end
+	elseif Key_Data_Format==2  %Binary
+		c_file = fopen([Full_Pathname,'.strn_',num2str(POST_Substep)],'rb');
+		[cc_Stress_Matrix,cc_count]   = fread(c_file,inf,'double');
+		fclose(c_file);
+		%转换成Matlab中的数据格式
+		for ccc_i=1:cc_count/4
+			Stress_Matrix(ccc_i,1) = ccc_i;
+			Stress_Matrix(ccc_i,2) = cc_Stress_Matrix(ccc_i*4-3);
+			Stress_Matrix(ccc_i,3) = cc_Stress_Matrix(ccc_i*4-2);
+			Stress_Matrix(ccc_i,4) = cc_Stress_Matrix(ccc_i*4-1);
+			Stress_Matrix(ccc_i,5) = cc_Stress_Matrix(ccc_i*4);
+		end
+	end
 end
 
 % Plot nodal stress contours.
 if Key_PLOT(3,1)==1
     Plot_Node_Stress(DISP,Stress_Matrix,POST_Substep,Crack_X,Crack_Y,POS,...
-	                 Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+	                 Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 					 Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
 end
 
 % Plot Gauss points stress contours.
 if Key_PLOT(3,1)==2
     Plot_Gauss_Stress(DISP,Stress_Matrix,POST_Substep,Crack_X,Crack_Y,POS,...
-	                 Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+	                 Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 					 Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
 end
 
 % Plot nodal disp contours.
 if Key_PLOT(4,1)==1
-    Plot_Node_Disp(DISP,POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-					      Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
+    Plot_Node_Disp(DISP,POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,...
+				   Node_Cross_elem,Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
 end
 
 % Plot Gauss points disp contours.
 if Key_PLOT(4,1)==2
-    Plot_Gauss_Disp(DISP,POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-					      Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
+    Plot_Gauss_Disp(DISP,POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,...
+					      Node_Cross_elem,Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
 end
 
 % Plot nodal field value contours.
-if Key_PLOT(5,1)~=0
+if Key_PLOT(5,1)==1 | Key_PLOT(5,1)==2 | Key_PLOT(5,1)==3
     if exist([Full_Pathname,'.fbfx_',num2str(POST_Substep)], 'file') ==2
-        Plot_Node_Field_Value(DISP,Field_Value,POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-					      Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
+        Plot_Node_Field_Value(DISP,Field_Value,POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,...
+					      Node_Cross_elem,Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
 	end
+end
+
+% Plot Gauss points field value contours.
+if Key_PLOT(5,1)==4
+    if exist([Full_Pathname,'.fdvg_',num2str(POST_Substep)], 'file') ==2
+        % Plot_Gauss_Disp(DISP,POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,...
+					      % Node_Cross_elem,Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
+        Plot_Gauss_Field_Value(DISP,Field_Value,POST_Substep,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
+					      Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
+    end
 end
 
 clear DISP

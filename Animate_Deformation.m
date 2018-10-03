@@ -1,6 +1,16 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function Animate_Deformation(Real_num_iteration)
 % This function generates the animation of the mesh deformation.
@@ -11,8 +21,7 @@ global Key_PLOT Full_Pathname Key_Dynamic Foc_x Foc_y
 global Size_Font num_Crack Color_Crack
 global Color_outline_Udefor Color_Backgro_Defor_1 
 global aveg_area_ele Time_Delay delt_time_NewMark Width_Crack
-global Key_HF Output_Freq num_of_Material
-global Key_Plot_Pressure Key_Plot_Quantity
+global Output_Freq num_of_Material
 global Color_Backgro_Defor_1 Color_Backgro_Defor_2 Color_Backgro_Defor_3 Color_Backgro_Defor_4
 global Color_Backgro_Defor_5 Color_Backgro_Defor_6 Color_Backgro_Defor_7
 global Color_Backgro_Defor_8 Color_Backgro_Defor_9 Color_Backgro_Defor_10
@@ -25,6 +34,9 @@ global num_Circ_Inclusion Circ_Inclu_Coor Enriched_Node_Type_Incl POS_Incl Elem_
 global Color_Inclusion
 global num_Poly_Inclusion Poly_Incl_Coor_x Poly_Incl_Coor_y
 global Key_Time_String
+global Ele_Cross_Point_RABCD
+global Key_Data_Format
+global Key_Animation Key_Ani_Ave Arc_Crack_Coor
 
 disp('    Generating deformation animations......')
 
@@ -38,7 +50,29 @@ Min_Y_Coor_New = zeros(Real_num_iteration,1);
 Max_Y_Coor_New = zeros(Real_num_iteration,1);
 for i=1:Real_num_iteration
     if mod(i,Output_Freq)==0
-		DISP = load([Full_Pathname,'.disn_',num2str(Itera_Num(i))]);
+		% DISP = load([Full_Pathname,'.disn_',num2str(Itera_Num(i))]);
+		if Key_Data_Format==1 
+			DISP   = load([Full_Pathname,'.disn_',num2str(Itera_Num(i))]);
+		elseif Key_Data_Format==2  %Binary
+			c_file = fopen([Full_Pathname,'.disn_',num2str(Itera_Num(i))],'rb');
+			[cc_DISP,cc_count]   = fread(c_file,inf,'double');
+			fclose(c_file);
+			%转换成Matlab中的数据格式
+			% for ccc_i=1:cc_count/2
+				% DISP(ccc_i,1) = ccc_i;
+				% DISP(ccc_i,2) = cc_DISP(ccc_i*2-1);
+				% DISP(ccc_i,3) = cc_DISP(ccc_i*2);
+			% end
+			%向量化编�?
+			ttt  = 1:cc_count/2;
+			ttt1 = ttt*2-1;
+			ttt2 = ttt*2;
+			DISP(ttt,1) = ttt;
+			DISP(ttt,2) = cc_DISP(ttt1);
+			DISP(ttt,3) = cc_DISP(ttt2);						
+		end	
+		
+		
 		scale = Key_PLOT(2,6);
 		% Get the new coordinates of all nodes
 		New_Node_Coor(:,1) = Node_Coor(:,1) + scale*DISP(1:Num_Node,2);
@@ -63,6 +97,7 @@ if Key_PLOT(2,7) == 2 || Key_PLOT(2,7) == 3
 	Boundary_X_Matrix = load([Full_Pathname,'.boux']);
 	Boundary_Y_Matrix = load([Full_Pathname,'.bouy']);
 end
+
 %********************************************
 % Get the total force matrix(fx ,fy ,fsum).
 %********************************************
@@ -86,8 +121,8 @@ end
 %*****************************************************************	
 Max_Pressure_for_aimation =0;
 Max_Quantity_for_aimation =0;
-if Key_HF==1 && Key_Plot_Pressure ==1
-    for i=1:Real_num_iteration
+if exist([Full_Pathname,'.cdpr_',num2str(Itera_Num(1))], 'file') ==2  
+	for i=1:Real_num_iteration
 		if num_Crack(i) ~= 0
 			file_cdpr = fopen([Full_Pathname,'.cdpr_',num2str(Itera_Num(i))]);			
 			division_pressure = cell(num_Crack(i));
@@ -100,11 +135,10 @@ if Key_HF==1 && Key_Plot_Pressure ==1
 			max_max_Pressure(i) = max(max_Pressure);	
 		end	
 	end
-    Max_Pressure_for_aimation = max(max_max_Pressure);
+	Max_Pressure_for_aimation = max(max_max_Pressure);
 	disp(['    > The maximum pressure of flow of all frames is ',num2str(Max_Pressure_for_aimation),' MPa.']) 
-end
-if Key_HF==1 && Key_Plot_Quantity ==1
-    for i=1:Real_num_iteration
+
+	for i=1:Real_num_iteration
 		if num_Crack(i) ~= 0
 			file_cdqu = fopen([Full_Pathname,'.cdqu_',num2str(Itera_Num(i))]);
 			division_quantity  = cell(num_Crack(i));
@@ -117,7 +151,7 @@ if Key_HF==1 && Key_Plot_Quantity ==1
 			max_max_Quantity(i) = max(max_Quantity);	
 		end	
 	end
-    Max_Quantity_for_aimation = max(max_max_Quantity);
+	Max_Quantity_for_aimation = max(max_max_Quantity);
 	disp(['    > The maximum quantity of flow of all frames is ',num2str(Max_Quantity_for_aimation),' m^2/s.']) 
 end
 
@@ -140,7 +174,28 @@ for i=1:Real_num_iteration
 	if mod(i,Output_Freq)==0
 	    i_output = i_output + 1;
 		disp(['    > Plotting and saving the deformation figure of frame ',num2str(i),'......']) 
-		DISP = load([Full_Pathname,'.disn_',num2str(Itera_Num(i))]);
+		% DISP = load([Full_Pathname,'.disn_',num2str(Itera_Num(i))]);
+		if Key_Data_Format==1 
+			DISP   = load([Full_Pathname,'.disn_',num2str(Itera_Num(i))]);
+		elseif Key_Data_Format==2  %Binary
+			c_file = fopen([Full_Pathname,'.disn_',num2str(Itera_Num(i))],'rb');
+			[cc_DISP,cc_count]   = fread(c_file,inf,'double');
+			fclose(c_file);
+			%转换成Matlab中的数据格式
+			% for ccc_i=1:cc_count/2
+				% DISP(ccc_i,1) = ccc_i;
+				% DISP(ccc_i,2) = cc_DISP(ccc_i*2-1);
+				% DISP(ccc_i,3) = cc_DISP(ccc_i*2);
+			% end
+			%向量化编�?
+			ttt  = 1:cc_count/2;
+			ttt1 = ttt*2-1;
+			ttt2 = ttt*2;
+			DISP(ttt,1) = ttt;
+			DISP(ttt,2) = cc_DISP(ttt1);
+			DISP(ttt,3) = cc_DISP(ttt2);						
+		end	
+		
         %<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		% Read crushed elements if Key_Crush=1
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -158,37 +213,179 @@ for i=1:Real_num_iteration
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		% Read coordinates and all other information of cracks if cracks exist.
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-		if num_Crack(Real_num_iteration) ~=0
-			if num_Crack(i) ~= 0
-				file_Crack_X = fopen([Full_Pathname,'.crax_',num2str(Itera_Num(i))]);
-				file_Crack_Y = fopen([Full_Pathname,'.cray_',num2str(Itera_Num(i))]);
-				Crack_X = cell(num_Crack(i));
-				Crack_Y = cell(num_Crack(i));
-				for j=1:num_Crack(i) 
-					Crack_X{j} = str2num(fgetl(file_Crack_X));
-					Crack_Y{j} = str2num(fgetl(file_Crack_Y));
-				end
-				fclose(file_Crack_X);
-				fclose(file_Crack_Y);
-				
-				Enriched_Node_Type = load([Full_Pathname,'.ennd_',num2str(Itera_Num(i))]);
-				POS = load([Full_Pathname,'.posi_',num2str(Itera_Num(i))]);
-				Elem_Type = load([Full_Pathname,'.elty_',num2str(Itera_Num(i))]);
-				Coors_Element_Crack = load([Full_Pathname,'.celc_',num2str(Itera_Num(i))]);
-				Node_Jun_elem = load([Full_Pathname,'.njel_',num2str(Itera_Num(i))]);%Junction增强节点对应的Junction单元号,added on 2016-07-11
-				Coors_Vertex        = load([Full_Pathname,'.celv_',num2str(Itera_Num(i))]);
-				Coors_Junction      = load([Full_Pathname,'.celj_',num2str(Itera_Num(i))]);
-				Coors_Tip           = load([Full_Pathname,'.celt_',num2str(Itera_Num(i))]);
-				Crack_Tip_Type      = load([Full_Pathname,'.ctty_',num2str(Itera_Num(i))]);
+		% if num_Crack(Real_num_iteration) ~=0
+		if num_Crack(i) ~= 0
+			file_Crack_X = fopen([Full_Pathname,'.crax_',num2str(Itera_Num(i))]);
+			file_Crack_Y = fopen([Full_Pathname,'.cray_',num2str(Itera_Num(i))]);
+			Crack_X = cell(num_Crack(i));
+			Crack_Y = cell(num_Crack(i));
+			for j=1:num_Crack(i) 
+				Crack_X{j} = str2num(fgetl(file_Crack_X));
+				Crack_Y{j} = str2num(fgetl(file_Crack_Y));
 			end
+			fclose(file_Crack_X);
+			fclose(file_Crack_Y);
+			if Key_Data_Format==1 
+				Enriched_Node_Type = load([Full_Pathname,'.ennd_',num2str(Itera_Num(i))]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.ennd_',num2str(Itera_Num(i))],'rb');
+				[cc_Enriched_Node_Type,cc_count]   = fread(c_file,inf,'int');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				Enriched_Node_Type = (reshape(cc_Enriched_Node_Type,num_Crack(Itera_Num(i)),Num_Node))';
+			end				
+			
+			if Key_Data_Format==1 
+				POS = load([Full_Pathname,'.posi_',num2str(Itera_Num(i))]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.posi_',num2str(Itera_Num(i))],'rb');
+				[cc_POS,cc_count]   = fread(c_file,inf,'int');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				POS = (reshape(cc_POS,num_Crack(Itera_Num(i)),Num_Node))';
+			end		
+			
+			
+			if Key_Data_Format==1 
+				Elem_Type = load([Full_Pathname,'.elty_',num2str(Itera_Num(i))]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.elty_',num2str(Itera_Num(i))],'rb');
+				[cc_Elem_Type,cc_count]   = fread(c_file,inf,'int');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				Elem_Type = (reshape(cc_Elem_Type,num_Crack(Itera_Num(i)),Num_Elem))';
+			end
+			
+			if Key_Data_Format==1 
+				tem_Coors_Element_Crack = load([Full_Pathname,'.celc_',num2str(Itera_Num(i))]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.celc_',num2str(Itera_Num(i))],'rb');
+				[cc_tem_Coors_Element_Crack,cc_count]   = fread(c_file,inf,'double');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				for ccc_i=1:cc_count/4
+					tem_Coors_Element_Crack(ccc_i,1) = cc_tem_Coors_Element_Crack(ccc_i*4-3);
+					tem_Coors_Element_Crack(ccc_i,2) = cc_tem_Coors_Element_Crack(ccc_i*4-2);
+					tem_Coors_Element_Crack(ccc_i,3) = cc_tem_Coors_Element_Crack(ccc_i*4-1);
+					tem_Coors_Element_Crack(ccc_i,4) = cc_tem_Coors_Element_Crack(ccc_i*4);
+				end
+			end
+			
+			
+			num_ele = size(tem_Coors_Element_Crack,1)/num_Crack(i);
+			for i_Cr = 1:num_Crack(i)
+				for i_Ele = 1:num_ele
+					Coors_Element_Crack(i_Ele,i_Cr,1:4) = tem_Coors_Element_Crack((i_Cr-1)*num_ele + i_Ele,1:4);
+				end
+			end
+			
+			Node_Cross_elem = [];
+			
+			% Node_Jun_elem = load([Full_Pathname,'.njel_',num2str(Itera_Num(i))]);%Junction增强节点对应的Junction单元�?,added on 2016-07-11
+			% Node_Jun_Hole = load([Full_Pathname,'.njhl_',num2str(Itera_Num(i))]);%Junction增强节点(Crack and hole)对应的Hole�?
+			
+			if Key_Data_Format==1 
+				Node_Jun_elem = load([Full_Pathname,'.njel_',num2str(Itera_Num(i))]); %Junction增强节点对应的Junction单元�?,added on 2016-07-11
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.njel_',num2str(Itera_Num(i))],'rb');
+				[cc_Node_Jun_elem,cc_count]   = fread(c_file,inf,'int');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				Node_Jun_elem = (reshape(cc_Node_Jun_elem,num_Crack(Itera_Num(i)),Num_Node))';
+			end	
+			if Key_Data_Format==1 
+				Node_Jun_Hole = load([Full_Pathname,'.njhl_',num2str(Itera_Num(i))]); %Junction增强节点对应的Junction单元�?,added on 2016-07-11
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.njhl_',num2str(Itera_Num(i))],'rb');
+				[cc_Node_Jun_Hole,cc_count]   = fread(c_file,inf,'int');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				Node_Jun_Hole = (reshape(cc_Node_Jun_Hole,num_Crack(Itera_Num(i)),Num_Node))';
+			end	
+			
+			if Key_Data_Format==1 
+				Coors_Vertex        = load([Full_Pathname,'.celv_',num2str(Itera_Num(i))]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.celv_',num2str(Itera_Num(i))],'rb');
+				[cc_Coors_Vertex,cc_count]   = fread(c_file,inf,'double');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				Coors_Vertex = (reshape(cc_Coors_Vertex,2,num_ele))';
+			end
+
+			if Key_Data_Format==1 
+				tem_Coors_Junction      = load([Full_Pathname,'.celj_',num2str(Itera_Num(i))]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.celj_',num2str(Itera_Num(i))],'rb');
+				[cc_tem_Coors_Junction,cc_count]   = fread(c_file,inf,'double');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				for ccc_i=1:cc_count/4
+					tem_Coors_Junction(ccc_i,1) = cc_tem_Coors_Junction(ccc_i*4-3);
+					tem_Coors_Junction(ccc_i,2) = cc_tem_Coors_Junction(ccc_i*4-2);
+					tem_Coors_Junction(ccc_i,3) = cc_tem_Coors_Junction(ccc_i*4-1);
+					tem_Coors_Junction(ccc_i,4) = cc_tem_Coors_Junction(ccc_i*4);
+				end
+			end
+			
+			
+			num_ele = size(tem_Coors_Element_Crack,1)/num_Crack(i);
+			for i_Cr = 1:num_Crack(i)
+				for i_Ele = 1:num_ele
+					Coors_Junction(i_Ele,i_Cr,1:4) = tem_Coors_Junction((i_Cr-1)*num_ele + i_Ele,1:4);
+				end
+			end
+			
+			disp('    > Reading celt file....');
+			if Key_Data_Format==1 
+				Coors_Tip           = load([Full_Pathname,'.celt_',num2str(Itera_Num(i))]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.celt_',num2str(Itera_Num(i))],'rb');
+				[cc_Coors_Tip,cc_count]   = fread(c_file,inf,'double');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				Coors_Tip = (reshape(cc_Coors_Tip,2,num_ele))';
+			end				
+			
+			Crack_Tip_Type      = load([Full_Pathname,'.ctty_',num2str(Itera_Num(i))]);
+			% end
 		else
+		    % 1111
 			Crack_X = [];   Crack_Y = [];
 			Enriched_Node_Type = [];
 			Crack_Tip_Type = [];
 			Elem_Type = [];
-			POS = []; Coors_Element_Crack= [];Coors_Vertex= [];Node_Jun_elem=[];
-			Coors_Junction= []; Coors_Tip= []; Elem_Type= [];
+			POS = []; Coors_Element_Crack= [];Coors_Vertex= [];Node_Jun_elem=[];Node_Cross_elem=[];
+			Coors_Junction= []; Coors_Tip= []; Elem_Type= [];Node_Jun_Hole=[];
 		end
+		
+		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		% Read coordinates of arc (Arc_Crack_Coor(,,1:11)) crack if arc crack exist, 2017-07-26.
+		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		if num_Crack(Real_num_iteration) ~= 0
+		    if num_Crack(i) ~= 0
+				if exist([Full_Pathname,'.arcc_',num2str(Itera_Num(i))], 'file') ==2  
+					disp('    > Reading coordinates of arc cracks....') 
+					Yes_Arc_Crack = 1;
+					file_Arc = fopen([Full_Pathname,'.arcc_',num2str(Itera_Num(i))]);
+					for iii_crack=1:num_Crack(Itera_Num(i))
+						nPt = size(Crack_X{iii_crack},2);
+						for jjj=1:11
+							Arc_Crack_Coor(iii_crack,1:nPt-1,jjj)= str2num(fgetl(file_Arc));
+						end
+					end
+					fclose(file_Arc);
+				else 
+					Yes_Arc_Crack  = 0;
+					Arc_Crack_Coor(1:1000,1:1000,1:11) = 0.0;
+				end
+			end
+		else 
+			% Arc_Crack_Coor(1:100,1:500,1:11) = 0.0;
+			Yes_Arc_Crack  = 0;
+			Arc_Crack_Coor(1:1000,1:1000,1:11) = 0.0;
+		end
+		
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		% Read coordinates and other info of holes if holes exist.
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -196,7 +393,7 @@ for i=1:Real_num_iteration
 			disp('    > Reading coordinates of hole....') 
 			file_Hole = fopen([Full_Pathname,'.hlcr']);
 			for iHole=1:num_Hole
-				Hole_Coor(iHole,1:3)= str2num(fgetl(file_Hole));
+				Hole_Coor(iHole,1:3)= str2DOUBLE(fgetl(file_Hole));
 			end
 			fclose(file_Hole);
 			disp('    > Reading ennh file of hole....') 
@@ -208,12 +405,12 @@ for i=1:Real_num_iteration
 			Elem_Type_Hl = load([Full_Pathname,'.elth_',num2str(Itera_Num(i))]);
 		end		
 		
-		% 读取圆形夹杂的坐标.
+		% 读取圆形夹杂的坐�?.
 		if num_Circ_Inclusion ~= 0
 			disp('    > Reading coordinates of circle inclusions....') 
 			file_Circ_Inclusion = fopen([Full_Pathname,'.jzcr']);
-			for i=1:num_Circ_Inclusion
-				Circ_Inclu_Coor(i,1:3)= str2num(fgetl(file_Circ_Inclusion));
+			for iiii=1:num_Circ_Inclusion
+				Circ_Inclu_Coor(iiii,1:3)= str2DOUBLE(fgetl(file_Circ_Inclusion));
 			end
 			fclose(file_Circ_Inclusion);
 			disp('    > Reading ennh file of circle inclusions....') 
@@ -224,16 +421,16 @@ for i=1:Real_num_iteration
 			Elem_Type_Incl = load([Full_Pathname,'.eltj_',num2str(Itera_Num(i))]);
 		end
 
-		% 读取多边形夹杂的坐标,2016-10-04.
+		% 读取多边形夹杂的坐标,added on 2016-10-04.
 		if num_Poly_Inclusion ~= 0
 			disp('    > Reading coordinates of polygon inclusions....') 
 			file_Poly_Incl_Coor_x = fopen([Full_Pathname,'.jzpx']);
 			file_Poly_Incl_Coor_y = fopen([Full_Pathname,'.jzpy']);
 			Poly_Incl_Coor_x = cell(num_Poly_Inclusion);
 			Poly_Incl_Coor_y = cell(num_Poly_Inclusion);
-			for i=1:num_Poly_Inclusion
-				Poly_Incl_Coor_x{i} = str2num(fgetl(file_Poly_Incl_Coor_x));
-				Poly_Incl_Coor_y{i} = str2num(fgetl(file_Poly_Incl_Coor_y));
+			for iiii=1:num_Poly_Inclusion
+				Poly_Incl_Coor_x{iiii} = str2DOUBLE(fgetl(file_Poly_Incl_Coor_x));
+				Poly_Incl_Coor_y{iiii} = str2DOUBLE(fgetl(file_Poly_Incl_Coor_y));
 			end
 			fclose(file_Poly_Incl_Coor_x);
 			fclose(file_Poly_Incl_Coor_y);
@@ -250,7 +447,16 @@ for i=1:Real_num_iteration
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		if num_Crack(i) ~= 0
 			disp(['      ----- Reading enriched nodes of cracks......'])		
-			Post_Enriched_Nodes = load([Full_Pathname,'.ennd_',num2str(Itera_Num(i))]);
+			if Key_Data_Format==1 
+				Post_Enriched_Nodes = load([Full_Pathname,'.ennd_',num2str(Itera_Num(i))]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.ennd_',num2str(Itera_Num(i))],'rb');
+				[cc_Post_Enriched_Nodes,cc_count]   = fread(c_file,inf,'int');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				Post_Enriched_Nodes = (reshape(cc_Post_Enriched_Nodes,num_Crack(Itera_Num(i)),Num_Node))';
+			end	
+				
 		else
 			Post_Enriched_Nodes =[];
 		end
@@ -264,10 +470,10 @@ for i=1:Real_num_iteration
 		xi = zeros(4,Num_Elem); yi = xi;
 		for iElem = 1:Num_Elem
 			NN = [Elem_Node(iElem,1) Elem_Node(iElem,2) ...
-				  Elem_Node(iElem,3) Elem_Node(iElem,4)];                                 % Nodes for current element
+				  Elem_Node(iElem,3) Elem_Node(iElem,4)];   % Nodes for current element
 			if Elem_Material(iElem)==1
-				xi_1(:,iElem) = New_Node_Coor(NN',1);                                     % Initial x-coordinates of nodes
-				yi_1(:,iElem) = New_Node_Coor(NN',2);                                     % Initial y-coordinates of nodes		
+				xi_1(:,iElem) = New_Node_Coor(NN',1);       % Initial x-coordinates of nodes
+				yi_1(:,iElem) = New_Node_Coor(NN',2);       % Initial y-coordinates of nodes		
 			elseif Elem_Material(iElem)==2
 				xi_2(:,iElem) = New_Node_Coor(NN',1);                                     
 				yi_2(:,iElem) = New_Node_Coor(NN',2);   
@@ -328,9 +534,9 @@ for i=1:Real_num_iteration
 			for iElem = 1:Num_Elem
 				if Crushed_element(iElem)==1
 					NN = [Elem_Node(iElem,1) Elem_Node(iElem,2) ...
-						  Elem_Node(iElem,3) Elem_Node(iElem,4)];                                 % Nodes for current element
-					xi_crushed(:,iElem) = New_Node_Coor(NN',1);                                   % Deformed x-coordinates of nodes
-					yi_crushed(:,iElem) = New_Node_Coor(NN',2);                                   % Deformed y-coordinates of nodes 
+						  Elem_Node(iElem,3) Elem_Node(iElem,4)];          % Nodes for current element
+					xi_crushed(:,iElem) = New_Node_Coor(NN',1);            % Deformed x-coordinates of nodes
+					yi_crushed(:,iElem) = New_Node_Coor(NN',2);            % Deformed y-coordinates of nodes 
 				end		
 			end
 			patch(xi_crushed,yi_crushed,Color_Crushed_ele) 
@@ -343,39 +549,64 @@ for i=1:Real_num_iteration
 				 [Node_Coor(Outline(:,1),2) Node_Coor(Outline(:,2),2)]','LineWidth',1.5,'Color',Color_outline_Udefor)     			 
 		end   
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-		%       单元接触状态
+		%       单元接触状�??
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		if Key_PLOT(2,13)==1 
-			Yes_Contact1=0;  %裂纹面闭合
-			Yes_Contact2=0;  %裂纹面由支撑剂支撑
+			Yes_Contact1=0;  %裂纹面闭�?
+			Yes_Contact2=0;  %裂纹面由支撑剂支�?
 			for iElem = 1:Num_Elem
 				xi_Elcs1(1:4,iElem) = [0;0;0;0];
 				yi_Elcs1(1:4,iElem) = [0;0;0;0];
 				xi_Elcs2(1:4,iElem) = [0;0;0;0];
 				yi_Elcs2(1:4,iElem) = [0;0;0;0];
 			end
-			%如果接触状态文件存在则：
+			%如果接触状�?�文件存在则�?
 			if exist([Full_Pathname,'.elcs_',num2str(Itera_Num(i))], 'file') ==2  
 				disp(['      ----- Plotting contact status of elements...'])
 				ELCS= load([Full_Pathname,'.elcs_',num2str(Itera_Num(i))]);
 				for iElem = 1:Num_Elem
 				
 					NN = [Elem_Node(iElem,1) Elem_Node(iElem,2) ...
-						  Elem_Node(iElem,3) Elem_Node(iElem,4)];                             % Nodes for current element
-					if ELCS(iElem) == 1    %裂纹面闭合
+						  Elem_Node(iElem,3) Elem_Node(iElem,4)];         % Nodes for current element
+					if ELCS(iElem) == 1    %裂纹面闭�?
 					% size(New_Node_Coor(NN',1))
 						xi_Elcs1(:,iElem) = New_Node_Coor(NN',1);                                     
 						yi_Elcs1(:,iElem) = New_Node_Coor(NN',2); 	
 						Yes_Contact1=1;
 					end
-					if ELCS(iElem) == 2    %裂纹面滑动
+					if ELCS(iElem) == 2    %裂纹面滑�?
 						xi_Elcs2(:,iElem) = New_Node_Coor(NN',1);                                     
 						yi_Elcs2(:,iElem) = New_Node_Coor(NN',2); 	
 						Yes_Contact2=1;
 					end
 				end
 				if Yes_Contact1==1
-					patch(xi_Elcs1,yi_Elcs1,[1,192/255,203/255])       %用粉红色标记该单元
+					patch(xi_Elcs1,yi_Elcs1,[1,192/255,203/255])          %用粉红色标记该单�?
+				end
+				if Yes_Contact2==1
+					patch(xi_Elcs2,yi_Elcs2,[160/255,102/255,211/255])    %用紫色标记该单元
+				end
+			end
+			%如果粘聚裂缝粘聚单元状�?�文件存在则(2017-04-24)�?
+			if exist([Full_Pathname,'.elco_',num2str(Itera_Num(i))], 'file') ==2  
+				disp(['      ----- Plotting cohesive crack status of elements...'])
+				ELCS= load([Full_Pathname,'.elco_',num2str(Itera_Num(i))]);
+				for iElem = 1:Num_Elem
+					NN = [Elem_Node(iElem,1) Elem_Node(iElem,2) ...
+						  Elem_Node(iElem,3) Elem_Node(iElem,4)];         % Nodes for current element
+					if ELCS(iElem) == 1   %粘聚单元
+						xi_Elcs1(:,iElem) = New_Node_Coor(NN',1);                                     
+						yi_Elcs1(:,iElem) = New_Node_Coor(NN',2); 	
+						Yes_Contact1=1;
+					end
+					% if ELCS(iElem) == 2    %裂纹面由支撑剂支�?
+						% xi_Elcs2(:,iElem) = Node_Coor(NN',1);                                     
+						% yi_Elcs2(:,iElem) = Node_Coor(NN',2); 	
+						% Yes_Contact2=1;
+					% end
+				end
+				if Yes_Contact1==1
+					patch(xi_Elcs1,yi_Elcs1,[1,192/255,203/255])               %用粉红色标记该单�?
 				end
 				if Yes_Contact2==1
 					patch(xi_Elcs2,yi_Elcs2,[160/255,102/255,211/255])         %用紫色标记该单元
@@ -461,9 +692,36 @@ for i=1:Real_num_iteration
 		%<<<<<<<<<<<<<<<<<<<<<<<<
 		if Key_PLOT(2,4) == 1
 			disp(['      ----- Plotting Gauss points......'])
-			% Read gauss point coordinates file.
-			Gauss_Coor = load([Full_Pathname,'.gcor_',num2str(i)]);
-			Gauss_Disp = load([Full_Pathname,'.disg_',num2str(i)]);
+			% Read gauss 坐标
+			if Key_Data_Format==1 
+			    Gauss_Coor = load([Full_Pathname,'.gcor_',num2str(i)]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.gcor_',num2str(i)],'rb');
+				[cc_Read_Gauss_Coor,cc_count]   = fread(c_file,inf,'double');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				for ccc_i=1:cc_count/2
+					Gauss_Coor(ccc_i,1) = ccc_i;
+					Gauss_Coor(ccc_i,2) = cc_Read_Gauss_Coor(ccc_i*2-1);
+					Gauss_Coor(ccc_i,3) = cc_Read_Gauss_Coor(ccc_i*2);
+				end
+			end			
+			
+			% 读取Gauss点位�?.
+			if Key_Data_Format==1 
+			    Gauss_Disp = load([Full_Pathname,'.disg_',num2str(i)]);
+			elseif Key_Data_Format==2  %Binary
+				c_file = fopen([Full_Pathname,'.disg_',num2str(i)],'rb');
+				[cc_tem_Gauss_dis,cc_count]   = fread(c_file,inf,'double');
+				fclose(c_file);
+				%转换成Matlab中的数据格式
+				for ccc_i=1:cc_count/2
+					Gauss_Disp(ccc_i,1) = ccc_i;
+					Gauss_Disp(ccc_i,2) = cc_tem_Gauss_dis(ccc_i*2-1);
+					Gauss_Disp(ccc_i,3) = cc_tem_Gauss_dis(ccc_i*2);
+				end
+			end
+			
 			plot(Gauss_Coor(:,2)+scale*Gauss_Disp(:,2),Gauss_Coor(:,3)+scale*Gauss_Disp(:,3),...
 										'bo','MarkerSize',1,'Color','black')
 			clear Gauss_Coor;
@@ -476,9 +734,9 @@ for i=1:Real_num_iteration
 			if num_Crack(i)~=0
 				for i_Crack = 1:num_Crack(i)
 					nPt = size(Crack_X{i_Crack},2);
-					for iPt = 2:nPt
-					x = [Crack_X{i_Crack}(iPt-1) Crack_X{i_Crack}(iPt)];
-					y = [Crack_Y{i_Crack}(iPt-1) Crack_Y{i_Crack}(iPt)];
+					for i_Seg = 1:nPt-1
+					    x = [Crack_X{i_Crack}(i_Seg) Crack_X{i_Crack}(i_Seg+1)];
+					    y = [Crack_Y{i_Crack}(i_Seg) Crack_Y{i_Crack}(i_Seg+1)];
 						for jj =1:2
 							% Get the local coordinates of the points of the crack. 
 							[Kesi,Yita] = Cal_KesiYita_by_Coors(x(jj),y(jj));
@@ -499,8 +757,132 @@ for i=1:Real_num_iteration
 						
 						last_x = [ x(1)+dis_x(1)*scale x(2)+dis_x(2)*scale];
 						last_y = [ y(1)+dis_y(1)*scale y(2)+dis_y(2)*scale];
-						
-						plot(last_x,last_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)   
+		                %----------------------------
+						%如果是弧形裂�?,2017-07-26
+						%----------------------------
+						%Arc_Crack_Coor:x,y,r,Radian_Start,Radian_End,Radian,Point_Start_x,Point_Start_y,Point_End_x,Point_End_y
+						if abs(sum(Arc_Crack_Coor(i_Crack,i_Seg,1:11)))>=1.0e-10 
+							c_R=Arc_Crack_Coor(i_Crack,i_Seg,4);
+							c_Direcction  =Arc_Crack_Coor(i_Crack,i_Seg,3);
+							c_Radian_Start=Arc_Crack_Coor(i_Crack,i_Seg,5)*pi/180;
+							c_Radian_End  =Arc_Crack_Coor(i_Crack,i_Seg,6)*pi/180;
+							%**********************
+							%   如果是�?�时针圆�?
+							%**********************
+							if c_Direcction >0.5
+								%若结束角度大于起始角�?,则直接绘制圆�?
+								if c_Radian_End>=c_Radian_Start 
+									c_alpha=c_Radian_Start:pi/100:c_Radian_End;
+									c_x=c_R*cos(c_alpha)+Arc_Crack_Coor(i_Crack,i_Seg,1);
+									c_y=c_R*sin(c_alpha)+Arc_Crack_Coor(i_Crack,i_Seg,2);
+									for k=1:size(c_x,2)
+										[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x(k),c_y(k));
+										[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x(k),c_y(k));
+										N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+										N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+										U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+										[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+										dis_c_x(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+										dis_c_y(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+										last_c_x(k) = c_x(k)+dis_c_x(k)*scale;last_c_y(k) = c_y(k)+dis_c_y(k)*scale;
+									end
+									plot(last_c_x,last_c_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+								%若结束角度小于起始角�?,则分成两部分绘制圆弧
+								else
+									%�?1部分:Radian_Start�?360
+									c_alpha1=c_Radian_Start:pi/100:2*pi;
+									c_x=c_R*cos(c_alpha1)+Arc_Crack_Coor(i_Crack,i_Seg,1);
+									c_y=c_R*sin(c_alpha1)+Arc_Crack_Coor(i_Crack,i_Seg,2);
+									for k=1:size(c_x,2)
+										[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x(k),c_y(k));
+										[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x(k),c_y(k));
+										N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+										N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+										U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+										[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+										dis_c_x(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+										dis_c_y(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+										last_c_x(k) = c_x(k)+dis_c_x(k)*scale;last_c_y(k) = c_y(k)+dis_c_y(k)*scale;
+									end
+									plot(last_c_x,last_c_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+									%�?2部分:0到Radian_End
+									c_alpha_2=0.0:pi/100:c_Radian_End;
+									c_x_2=c_R*cos(c_alpha_2)+Arc_Crack_Coor(i_Crack,i_Seg,1);
+									c_y_2=c_R*sin(c_alpha_2)+Arc_Crack_Coor(i_Crack,i_Seg,2);
+									for k=1:size(c_x_2,2)
+										[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x_2(k),c_y_2(k));
+										[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x_2(k),c_y_2(k));
+										N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+										N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+										U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+										[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+										dis_c_x_2(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+										dis_c_y_2(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+										last_c_x_2(k) = c_x_2(k)+dis_c_x_2(k)*scale;last_c_y_2(k) = c_y_2(k)+dis_c_y_2(k)*scale;
+									end
+									plot(last_c_x_2,last_c_y_2,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+								end
+							%**********************
+							%   如果是顺时针圆弧
+							%**********************
+							elseif c_Direcction < (-0.5)
+								%若结束角度大于起始角�?,则分成两部分绘制圆弧
+								if c_Radian_End>=c_Radian_Start 
+									%�?1部分:Radian_End�?360
+									c_alpha1=c_Radian_End:pi/100:2*pi;
+									c_x=c_R*cos(c_alpha1)+Arc_Crack_Coor(i_Crack,i_Seg,1);
+									c_y=c_R*sin(c_alpha1)+Arc_Crack_Coor(i_Crack,i_Seg,2);
+									for k=1:size(c_x,2)
+										[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x(k),c_y(k));
+										[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x(k),c_y(k));
+										N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+										N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+										U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+										[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+										dis_c_x(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+										dis_c_y(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+										last_c_x(k) = c_x(k)+dis_c_x(k)*scale;last_c_y(k) = c_y(k)+dis_c_y(k)*scale;
+									end
+									plot(last_c_x,last_c_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+									%�?2部分:0到Radian_Start
+									c_alpha_2=0.0:pi/100:c_Radian_Start;
+									c_x_2=c_R*cos(c_alpha_2)+Arc_Crack_Coor(i_Crack,i_Seg,1);
+									c_y_2=c_R*sin(c_alpha_2)+Arc_Crack_Coor(i_Crack,i_Seg,2);
+									for k=1:size(c_x_2,2)
+										[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x_2(k),c_y_2(k));
+										[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x_2(k),c_y_2(k));
+										N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+										N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+										U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+										[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+										dis_c_x_2(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+										dis_c_y_2(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+										last_c_x_2(k) = c_x_2(k)+dis_c_x_2(k)*scale;last_c_y_2(k) = c_y_2(k)+dis_c_y_2(k)*scale;
+									end
+									plot(last_c_x_2,last_c_y_2,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+								%若结束角度小于起始角�?,则直接绘制圆�?
+								else
+									c_alpha=c_Radian_End:pi/100:c_Radian_Start;
+									c_x=c_R*cos(c_alpha)+Arc_Crack_Coor(i_Crack,i_Seg,1);
+									c_y=c_R*sin(c_alpha)+Arc_Crack_Coor(i_Crack,i_Seg,2);
+									for k=1:size(c_x,2)
+										[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x(k),c_y(k));
+										[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x(k),c_y(k));
+										N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+										N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+										U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+										[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+										dis_c_x(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+										dis_c_y(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+										last_c_x(k) = c_x(k)+dis_c_x(k)*scale;last_c_y(k) = c_y(k)+dis_c_y(k)*scale;
+									end
+									plot(last_c_x,last_c_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+								end
+							end
+						%如果是直线裂�?
+						elseif abs(sum(Arc_Crack_Coor(i_Crack,i_Seg,1:11)))<1.0e-10 					
+							plot(last_x,last_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)   
+						end
 					end
 				end	
 			end
@@ -519,11 +901,14 @@ for i=1:Real_num_iteration
 					alpha = 2*pi/num_fineness*(j_P-1);
 					c_x(j_P) = Coor_x + c_R*cos(alpha);
 					c_y(j_P) = Coor_y + c_R*sin(alpha);
-					[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x(j_P),c_y(j_P));
 					[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x(j_P),c_y(j_P));
-					[c_dis_x(j_P),c_dis_y(j_P)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,Itera_Num(i),DISP,Kesi,Yita...
-																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+                    %Sometimes the element does not exist, for example, only part of the hole locates inside the model	
+			        if c_Elem_Num~=0
+						[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x(j_P),c_y(j_P));
+					    [c_dis_x(j_P),c_dis_y(j_P)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,Itera_Num(i),DISP,Kesi,Yita...
+																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																	  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
+					end
 				end
 				x_new = c_x + c_dis_x*scale;
 				y_new = c_y + c_dis_y*scale;
@@ -548,106 +933,111 @@ for i=1:Real_num_iteration
 					[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x(j_P),c_y(j_P));
 					[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x(j_P),c_y(j_P));
 					[c_dis_x(j_P),c_dis_y(j_P)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,Itera_Num(i),DISP,Kesi,Yita...
-																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																	  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
 				end
 				x_new = c_x + c_dis_x*scale;
 				y_new = c_y + c_dis_y*scale;
 				% plot(x_new,y_new,'-')
-				patch(x_new,y_new,Color_Inclusion,'facealpha',0.3,'edgecolor','black','LineWidth',0.1)	 %透明度'facealpha'	
+				patch(x_new,y_new,Color_Inclusion,'facealpha',0.3,'edgecolor','black','LineWidth',0.1)	 %透明�?'facealpha'	
 			end	
 		end
-			%<<<<<<<<<<<<<<<<<<<<<<<<<
-			% 绘制圆形夹杂,2016-10-19
-			%<<<<<<<<<<<<<<<<<<<<<<<<<
-			disp(['      ----- Plotting circle inclusion...'])
-			if num_Circ_Inclusion ~=0
-				for i_Inclusion = 1:num_Circ_Inclusion
-					Coor_x  = Circ_Inclu_Coor(i_Inclusion,1);
-					Coor_y  = Circ_Inclu_Coor(i_Inclusion,2);
-					c_R  = Circ_Inclu_Coor(i_Inclusion,3);
-					num_fineness = 100;
-					for cc_j = 1:num_fineness+1
-						alpha = 2*pi/num_fineness*(cc_j-1);
-						cc_x(cc_j) = Coor_x + c_R*cos(alpha);
-						cc_y(cc_j) = Coor_y + c_R*sin(alpha);
-						[Kesi,Yita] = Cal_KesiYita_by_Coors(cc_x(cc_j),cc_y(cc_j));
-						[c_Elem_Num] = Cal_Ele_Num_by_Coors(cc_x(cc_j),cc_y(cc_j));
-						[c_dis_x(cc_j),c_dis_y(cc_j)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,Itera_Num(i),DISP,Kesi,Yita...
-																		 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-																		  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
-					end
-					x_new = cc_x + c_dis_x*scale;
-					y_new = cc_y + c_dis_y*scale;
-					% 绘制
-					plot(x_new,y_new,'-','color','black')
-					% 填充
-					% patch(x_new,y_new,Color_Inclusion,'facealpha',0.3,'edgecolor','black','LineWidth',0.1)	 %透明度'facealpha'
-				end	
-			end
-			
-			%<<<<<<<<<<<<<<<<<<<<<<<<<<<
-			% 绘制多边形夹杂,2016-10-19
-			%<<<<<<<<<<<<<<<<<<<<<<<<<<<
-			if num_Poly_Inclusion ~=0
-				disp(['      ----- Plotting poly inclusion...'])
-				for iii = 1:num_Poly_Inclusion
-					nEdge = size(Poly_Incl_Coor_x{iii},2);
-					Num_Diversion = 5;    %多边形的每条边拆分成5份
-					cc_k = 0;
-					for iEdge = 1:nEdge
-						%获取边线的起点和终点
-						if iEdge==nEdge
-							Line_Edge(1,1) = Poly_Incl_Coor_x{iii}(iEdge); %边线的起点
-							Line_Edge(1,2) = Poly_Incl_Coor_y{iii}(iEdge);
-							Line_Edge(2,1) = Poly_Incl_Coor_x{iii}(1);     %边线的终点
-							Line_Edge(2,2) = Poly_Incl_Coor_y{iii}(1);
-						else
-							Line_Edge(1,1) = Poly_Incl_Coor_x{iii}(iEdge);   %边线的起点
-							Line_Edge(1,2) = Poly_Incl_Coor_y{iii}(iEdge);
-							Line_Edge(2,1) = Poly_Incl_Coor_x{iii}(iEdge+1); %边线的终点
-							Line_Edge(2,2) = Poly_Incl_Coor_y{iii}(iEdge+1);
-						end
-						% 等分点.
-						a_x = Line_Edge(1,1);
-						a_y = Line_Edge(1,2);
-						b_x = Line_Edge(2,1);
-						b_y = Line_Edge(2,2);
-						%计算边线起点的位移
-						cc_k =cc_k+1;
-						cc_x(cc_k) = a_x;
-						cc_y(cc_k) = a_y;
-						[Kesi,Yita] = Cal_KesiYita_by_Coors(cc_x(cc_k),cc_y(cc_k));
-						[c_Elem_Num] = Cal_Ele_Num_by_Coors(cc_x(cc_k),cc_y(cc_k));
-						[cc_dis_x(cc_k),cc_dis_y(cc_k)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,Itera_Num(i),DISP,Kesi,Yita...
-																		 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-																		  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
-						%计算等分点的位移
-						for cc_j =  1:Num_Diversion-1
-							cc_k=cc_k+1;
-							cc_x(cc_k) = (cc_j*b_x+(Num_Diversion-cc_j)*a_x)/Num_Diversion;
-							cc_y(cc_k) = (cc_j*b_y+(Num_Diversion-cc_j)*a_y)/Num_Diversion;
-							[Kesi,Yita] = Cal_KesiYita_by_Coors(cc_x(cc_k),cc_y(cc_k));
-							[c_Elem_Num] = Cal_Ele_Num_by_Coors(cc_x(cc_k),cc_y(cc_k));
-							[cc_dis_x(cc_k),cc_dis_y(cc_k)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,Itera_Num(i),DISP,Kesi,Yita...
-																		 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
-																		  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
-						end												      
-					end
-					x_new = cc_x + cc_dis_x*scale;
-					y_new = cc_y + cc_dis_y*scale;
-					................
-					% option1:填充
-					%................
-					% patch(x_new,y_new,Color_Inclusion,'facealpha',0.3,'edgecolor','black','LineWidth',0.1)	 %透明度'facealpha'
-					................
-					% option2:绘制边线
-					%................
-					x_new(cc_k+1) = x_new(1);
-					y_new(cc_k+1) = y_new(1);
-					plot(x_new,y_new,'-','color','black')
-				end	
+		%<<<<<<<<<<<<<<<<<<<<<<<<<
+		% 绘制圆形夹杂,2016-10-19
+		%<<<<<<<<<<<<<<<<<<<<<<<<<
+		disp(['      ----- Plotting circle inclusion...'])
+		if num_Circ_Inclusion ~=0
+			for i_Inclusion = 1:num_Circ_Inclusion
+				Coor_x  = Circ_Inclu_Coor(i_Inclusion,1);
+				Coor_y  = Circ_Inclu_Coor(i_Inclusion,2);
+				c_R  = Circ_Inclu_Coor(i_Inclusion,3);
+				num_fineness = 100;
+				for cc_j = 1:num_fineness+1
+					alpha = 2*pi/num_fineness*(cc_j-1);
+					cc_x(cc_j) = Coor_x + c_R*cos(alpha);
+					cc_y(cc_j) = Coor_y + c_R*sin(alpha);
+					[Kesi,Yita] = Cal_KesiYita_by_Coors(cc_x(cc_j),cc_y(cc_j));
+					[c_Elem_Num] = Cal_Ele_Num_by_Coors(cc_x(cc_j),cc_y(cc_j));
+					[c_dis_x(cc_j),c_dis_y(cc_j)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,Itera_Num(i),DISP,Kesi,Yita...
+																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
+																	  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
+				end
+				x_new = cc_x + c_dis_x*scale;
+				y_new = cc_y + c_dis_y*scale;
+				% 绘制
+				plot(x_new,y_new,'-','color','black')
+				% 填充
+				% patch(x_new,y_new,Color_Inclusion,'facealpha',0.3,'edgecolor','black','LineWidth',0.1)	 %透明�?'facealpha'
 			end	
+		end
+			
+		%<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		% 绘制多边形夹�?,2016-10-19
+		%<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		if num_Poly_Inclusion ~=0
+			disp(['      ----- Plotting poly inclusion...'])
+			for iii = 1:num_Poly_Inclusion
+				nEdge = size(Poly_Incl_Coor_x{iii},2);
+				Num_Diversion = 5;    %多边形的每条边拆分成5�?
+				cc_k = 0;
+				for iEdge = 1:nEdge
+					%获取边线的起点和终点
+					if iEdge==nEdge
+						Line_Edge(1,1) = Poly_Incl_Coor_x{iii}(iEdge);   %边线的起�?
+						Line_Edge(1,2) = Poly_Incl_Coor_y{iii}(iEdge);
+						Line_Edge(2,1) = Poly_Incl_Coor_x{iii}(1);       %边线的终�?
+						Line_Edge(2,2) = Poly_Incl_Coor_y{iii}(1);
+					else
+						Line_Edge(1,1) = Poly_Incl_Coor_x{iii}(iEdge);   %边线的起�?
+						Line_Edge(1,2) = Poly_Incl_Coor_y{iii}(iEdge);
+						Line_Edge(2,1) = Poly_Incl_Coor_x{iii}(iEdge+1); %边线的终�?
+						Line_Edge(2,2) = Poly_Incl_Coor_y{iii}(iEdge+1);
+					end
+					% 等分�?.
+					a_x = Line_Edge(1,1);
+					a_y = Line_Edge(1,2);
+					b_x = Line_Edge(2,1);
+					b_y = Line_Edge(2,2);
+					%计算边线起点的位�?
+					cc_k =cc_k+1;
+					cc_x(cc_k) = a_x;
+					cc_y(cc_k) = a_y;
+					[c_Elem_Num] = Cal_Ele_Num_by_Coors(cc_x(cc_k),cc_y(cc_k));
+			        if c_Elem_Num~=0
+					    [Kesi,Yita] = Cal_KesiYita_by_Coors(cc_x(cc_k),cc_y(cc_k));
+					    [cc_dis_x(cc_k),cc_dis_y(cc_k)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,Itera_Num(i),DISP,Kesi,Yita...
+																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
+																	  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
+					end
+					%计算等分点的位移
+					for cc_j =  1:Num_Diversion-1
+						cc_k=cc_k+1;
+						cc_x(cc_k) = (cc_j*b_x+(Num_Diversion-cc_j)*a_x)/Num_Diversion;
+						cc_y(cc_k) = (cc_j*b_y+(Num_Diversion-cc_j)*a_y)/Num_Diversion;
+						
+						[c_Elem_Num] = Cal_Ele_Num_by_Coors(cc_x(cc_k),cc_y(cc_k));
+						if c_Elem_Num~=0
+					    	[Kesi,Yita] = Cal_KesiYita_by_Coors(cc_x(cc_k),cc_y(cc_k));
+						    [cc_dis_x(cc_k),cc_dis_y(cc_k)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,Itera_Num(i),DISP,Kesi,Yita...
+																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Cross_elem,...
+																	  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
+						end
+					end												      
+				end
+				x_new = cc_x + cc_dis_x*scale;
+				y_new = cc_y + cc_dis_y*scale;
+				................
+				% option1:填充
+				%................
+				patch(x_new,y_new,Color_Inclusion,'facealpha',0.3,'edgecolor','black','LineWidth',0.1)	 %透明�?'facealpha'
+				................
+				% option2:绘制边线
+				%................
+				% x_new(cc_k+1) = x_new(1);
+				% y_new(cc_k+1) = y_new(1);
+				% plot(x_new,y_new,'-','color','black')
+			end	
+		end	
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		% 绘制天然裂缝.
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -692,7 +1082,7 @@ for i=1:Real_num_iteration
 		if Key_PLOT(2,5) == 2 & num_Crack(i)~=0
 			disp(['      ----- Plotting shaped cracks......'])
 			[Shaped_Crack_Points] = Cal_Shaped_Cracks(Crack_X,Crack_Y,i,Itera_Num(i),num_Crack,Crack_Tip_Type,POS,...
-									Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+									Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 									Coors_Vertex,Coors_Junction,Coors_Tip,DISP,scale);
 			Plot_Shaped_Cracks(Shaped_Crack_Points);
 		end
@@ -700,7 +1090,7 @@ for i=1:Real_num_iteration
 		%绘制支撑剂的圆球
 		%<<<<<<<<<<<<<<<<<<<<<<
 		if Key_PLOT(2,10)==1 
-			%如果支撑剂直径和坐标文件存在：
+			%如果支撑剂直径和坐标文件存在�?
 			if exist([Full_Pathname,'.epcr_',num2str(Itera_Num(i))], 'file') ==2   
                 disp(['      ----- Plotting proppant......'])				
 				Plotting shaped cracks
@@ -708,31 +1098,31 @@ for i=1:Real_num_iteration
 				c_D_Coors=load([Full_Pathname,'.epcr_',num2str(Itera_Num(i))]);
 				num_Proppant = size(c_D_Coors,1);
 				for tt_i=1:num_Proppant
-					%绘制实心圆
+					%绘制实心�?
 					alpha=0:pi/20:2*pi;
 					c_Elem_Num = c_D_Coors(tt_i,1);
 					R = c_D_Coors(tt_i,2)/2*Key_PLOT(2,6);
 					old_Coor_x = c_D_Coors(tt_i,3);
 					old_Coor_y = c_D_Coors(tt_i,4);
-					omega = c_D_Coors(tt_i,5);  %对应裂纹片段的倾角
+					omega = c_D_Coors(tt_i,5);  %对应裂纹片段的�?�角
 					l_elem= sqrt(aveg_area_ele);
 					offset_delta = 0.001*l_elem;
-					%原支撑剂所在点的上裂纹偏置微小量之后的点
+					%原支撑剂�?在点的上裂纹偏置微小量之后的�?
 					old_Coor_x_Up  = old_Coor_x - offset_delta*sin(omega);
 					old_Coor_y_Up  = old_Coor_y + offset_delta*cos(omega);
-					%原支撑剂所在点的上裂纹偏置微小量之后下偏置点
+					%原支撑剂�?在点的上裂纹偏置微小量之后下偏置�?
 					old_Coor_x_Low = old_Coor_x + offset_delta*sin(omega);
 					old_Coor_y_Low = old_Coor_y - offset_delta*cos(omega);
-					%计算支撑剂中心坐标变形后的坐标
+					%计算支撑剂中心坐标变形后的坐�?
 					[Kesi_Up,Yita_Up] = Cal_KesiYita_by_Coors(old_Coor_x_Up,old_Coor_y_Up);
 					[dis_x_Up,dis_y_Up] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,Itera_Num(i),DISP,Kesi_Up,Yita_Up...
-																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																	  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y);
 					[Kesi_Low,Yita_Low] = Cal_KesiYita_by_Coors(old_Coor_x_Low,old_Coor_y_Low);
 					[dis_x_Low,dis_y_Low] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,Itera_Num(i),DISP,Kesi_Low,Yita_Low...
-																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																	 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																	  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y);
-					%真实的支撑剂所在点的位移											  
+					%真实的支撑剂�?在点的位�?											  
 					dis_x = (dis_x_Up + dis_x_Low)/2;			
 					dis_y = (dis_y_Up + dis_y_Low)/2;				
 					Coor_x = old_Coor_x  + dis_x*Key_PLOT(2,6);
@@ -820,20 +1210,17 @@ for i=1:Real_num_iteration
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		deformation(i_output) = getframe(gcf);       
 		im=frame2im(deformation(i_output));         
-		[I,map]=rgb2ind(im,256);
-		k=i_output-0;
+		[II,map]=rgb2ind(im,256);
+		kkkk=i_output-0;
 		str1='_deformation';
 		str2=Full_Pathname;
 		FileName =[str2,str1,'.gif'];
-		if k==1;
-			imwrite(I,map,FileName,'gif','Loopcount',inf,'DelayTime',Time_Delay);    
+		if kkkk==1;
+			imwrite(II,map,FileName,'gif','Loopcount',inf,'DelayTime',Time_Delay);    
 		else
-			imwrite(I,map,FileName,'gif','WriteMode','append','DelayTime',Time_Delay);
+			imwrite(II,map,FileName,'gif','WriteMode','append','DelayTime',Time_Delay);
 		end
 		
 		close
     end
 end
-
-
-

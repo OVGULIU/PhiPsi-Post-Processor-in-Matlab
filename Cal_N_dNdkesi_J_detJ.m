@@ -1,11 +1,19 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function [N,dNdkesi,J,detJ] = Cal_N_dNdkesi_J_detJ(kesi,yita,X_NODES,Y_NODES)
 % This function calculates N, dNdkesi, J and the determinant of Jacobian matrix.
-% This function is called by Stiffness_Matrix_XFEM and Cal_B_Matrix_XFEM. 
-
 
 
 % Only calculate N if X_NODES is empty.

@@ -1,12 +1,22 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function [F,dFdx,dFdy] = Cal_F_dFdx_dFdy(r,theta,omega,mu,c_mat_type)
 % This function calculates the tip enrichment functions F and their derivative, dFdx and dFdy.
 
 global aveg_area_ele 
-global Material_Type
+global Key_TipEnrich
 
 if r~=0
     r2 = sqrt(r);
@@ -32,10 +42,10 @@ if c_mat_type ==1
 	
 	% Tip enrichment functions F.
 	
-		F(1) = r2*st2;
-		F(2) = r2*ct2;
-		F(3) = r2*st2*st;
-		F(4) = r2*ct2*st;
+	F(1) = r2*st2;
+	F(2) = r2*ct2;
+	F(3) = r2*st2*st;
+	F(4) = r2*ct2*st;
 
 	% dF1dx1 and dF1dx2
 	dF1dx1 = -fac*st2;
@@ -156,4 +166,44 @@ elseif c_mat_type ==2 || c_mat_type ==3
 	dFdx = dFxy(1,:);
 	dFdy = dFxy(2,:); 
 end
-
+%如果是粘性裂尖
+if Key_TipEnrich ==4
+	st2 = sin(theta/2.0);
+	ct2 = cos(theta/2.0);
+    %Tip enrichment functions F.
+	F(1) = r*st2;
+	
+	% F(1) = r2*st2;
+	
+    F(2) = 0.0;
+    F(3) = 0.0;
+    F(4) = 0.0;
+	%dF1dx1 and dF1dx2
+    dF1dx1 = st2;
+    dF1dx2 = r/2.0*ct2;
+	
+	
+	% dF1dx1 and dF1dx2
+	% fac = 0.5/r2;
+	% dF1dx1 = -fac*st2;
+	% dF1dx2 =  fac*ct2;
+	
+	
+    %dx1dx
+    dx1dx =  cos(omega);
+    %dx2dx
+    dx2dx = -sin(omega);
+    %dx1dy
+    dx1dy =  sin(omega);
+    %dx2dy
+    dx2dy =  cos(omega);
+    %dFdx and dFdy
+    dFdx(1) = dF1dx1*dx1dx + dF1dx2*dx2dx;
+    dFdy(1) = dF1dx1*dx1dy + dF1dx2*dx2dy;
+    dFdx(2) = 0.0;
+    dFdy(2) = 0.0;
+    dFdx(3) = 0.0;
+    dFdy(3) = 0.0;
+    dFdx(4) = 0.0;
+    dFdy(4) = 0.0;
+end

@@ -1,8 +1,18 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
-function Plot_Gauss_Disp(DISP,isub,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+function Plot_Gauss_Disp(DISP,isub,Crack_X,Crack_Y,POS,Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 					      Coors_Vertex,Coors_Junction,Coors_Tip,Crack_Tip_Type,Shaped_Crack_Points)
 % This function plots the displacement contours of all Gauss points.
 
@@ -19,6 +29,10 @@ global num_Hole Hole_Coor
 global num_Circ_Inclusion Circ_Inclu_Coor
 global Color_Inclusion
 global num_Poly_Inclusion Poly_Incl_Coor_x Poly_Incl_Coor_y
+global num_Cross Cross_Coor Enriched_Node_Type_Cross POS_Cross Elem_Type_Cross
+global Arc_Crack_Coor Yes_Arc_Crack
+global Key_Data_Format
+global num_HC HC_Coor Enriched_Node_Type_HC Node_HC_elem POS_HC Elem_Type_HC
 
 disp('    > Plotting displacement contours of all Gauss points....') 
 
@@ -34,15 +48,56 @@ Max_X_Coor_New = max(max(New_Node_Coor(:,1)));
 Min_Y_Coor_New = min(min(New_Node_Coor(:,2)));
 Max_Y_Coor_New = max(max(New_Node_Coor(:,2)));
 
-% Read gauss disp.
-tem_Gauss_dis = load([Full_Pathname,'.disg_',num2str(isub)]);
+% 读取Gauss点位移.
+if Key_Data_Format==1 
+    tem_Gauss_dis = load([Full_Pathname,'.disg_',num2str(isub)]);
+elseif Key_Data_Format==2  %Binary
+	c_file = fopen([Full_Pathname,'.disg_',num2str(isub)],'rb');
+	[cc_tem_Gauss_dis,cc_count]   = fread(c_file,inf,'double');
+	fclose(c_file);
+	%转换成Matlab中的数据格式
+	% for ccc_i=1:cc_count/2
+		% tem_Gauss_dis(ccc_i,1) = ccc_i;
+		% tem_Gauss_dis(ccc_i,2) = cc_tem_Gauss_dis(ccc_i*2-1);
+		% tem_Gauss_dis(ccc_i,3) = cc_tem_Gauss_dis(ccc_i*2);
+	% end
+	%向量化编程
+	ttt  = 1:cc_count/2;
+	ttt1 = ttt*2-1;
+	ttt2 = ttt*2;
+	tem_Gauss_dis(ttt,1) = ttt;
+	tem_Gauss_dis(ttt,2) = cc_tem_Gauss_dis(ttt1);
+	tem_Gauss_dis(ttt,3) = cc_tem_Gauss_dis(ttt2);	
+end
+
 Total_Gauss = size(tem_Gauss_dis,1);   %总的Gauss点数目
 
 dis_x(1:Total_Gauss) = tem_Gauss_dis(1:Total_Gauss,2);
 dis_y(1:Total_Gauss) = tem_Gauss_dis(1:Total_Gauss,3);
 
 % Read gauss 坐标
-Read_Gauss_Coor = load([Full_Pathname,'.gcor_',num2str(isub)]);
+if Key_Data_Format==1 
+    Read_Gauss_Coor = load([Full_Pathname,'.gcor_',num2str(isub)]);
+elseif Key_Data_Format==2  %Binary
+	c_file = fopen([Full_Pathname,'.gcor_',num2str(isub)],'rb');
+	[cc_tem_Gauss_cor,cc_count]   = fread(c_file,inf,'double');
+	fclose(c_file);
+	%转换成Matlab中的数据格式
+	% for ccc_i=1:cc_count/2
+		% Read_Gauss_Coor(ccc_i,1) = ccc_i;
+		% Read_Gauss_Coor(ccc_i,2) = cc_tem_Gauss_cor(ccc_i*2-1);
+		% Read_Gauss_Coor(ccc_i,3) = cc_tem_Gauss_cor(ccc_i*2);
+	% end
+	%向量化编程
+	ttt  = 1:cc_count/2;
+	ttt1 = ttt*2-1;
+	ttt2 = ttt*2;
+	Read_Gauss_Coor(ttt,1) = ttt;
+	Read_Gauss_Coor(ttt,2) = cc_tem_Gauss_cor(ttt1);
+	Read_Gauss_Coor(ttt,3) = cc_tem_Gauss_cor(ttt2);
+end	
+	
+
 Gauss_Coor(:,1) = Read_Gauss_Coor(:,2);
 Gauss_Coor(:,2) = Read_Gauss_Coor(:,3);
 New_Gauss_Coor(:,1) = Gauss_Coor(:,1) + scale*dis_x(:);
@@ -70,8 +125,16 @@ elseif Key_PLOT(4,8)==1
 	gy    = Min_Y_Coor_New:delta:Max_Y_Coor_New;
 end
 
+% 绘图设置.
+Start_Dis_Type =1;      % Plot Sxx, Sxy, Syy and Mises.
+End_Dis_Type   =2; 
+if Key_PLOT(4,2) ==1       % Only plot位移分量平方和开根号.
+    Start_Dis_Type =3;
+	End_Dis_Type   =3;
+end
+
 % Plot the contours.
-for i = 1:2
+for i = Start_Dis_Type:End_Dis_Type
     % New figure.
     Tools_New_Figure
 	hold on;
@@ -94,8 +157,7 @@ for i = 1:2
             end	
 		end
 	    disp('      Contouring Ux....') 
-		%如果是快速云图绘制法,那么有可能网格化之后的数据范围会发生变化,因此绘图时需要将云图范围修正回真实的
-		%范围
+		%如果是快速云图绘制法,那么有可能网格化之后的数据范围会发生变化,因此绘图时需要将云图范围修正回真实的范围
 		% if Key_Contour_Metd==2
 		    % caxis([min(dis_x), max(dis_x)]); 
 		% end
@@ -122,14 +184,42 @@ for i = 1:2
 			end	
 		end
 	    disp('      Contouring Uy....') 
-		%如果是快速云图绘制法,那么有可能网格化之后的数据范围会发生变化,因此绘图时需要将云图范围修正回真实的
-		%范围
+		%如果是快速云图绘制法,那么有可能网格化之后的数据范围会发生变化,因此绘图时需要将云图范围修正回真实的范围
 		% if Key_Contour_Metd==2
 		    % caxis([min(dis_y), max(dis_y)]); 
 		% end
 		contourf(X,Y,Uy,Num_Contourlevel,'LineStyle','none')
 		title('\it Displacement y','FontName','Times New Roman','FontSize',Size_Font)
 		clear Uy
+	%位移分量平方和开根号
+	elseif i == 3
+	    c_SQRT_Ux_Uy =sqrt(dis_x(:).*dis_x(:) + dis_y(:).*dis_y(:));
+	    if Key_PLOT(4,8)==0
+			disp('      Resample sqrt(dis_x^2 + dis_y^2)....') 
+			if 	Key_Contour_Metd==1
+				[X,Y,SQRT_Ux_Uy] = griddata(Gauss_Coor(:,1),Gauss_Coor(:,2),c_SQRT_Ux_Uy ,...
+			                    unique(Gauss_Coor(:,1)),unique(Gauss_Coor(:,2))');
+			elseif 	Key_Contour_Metd==2
+				[SQRT_Ux_Uy,X,Y] = Tools_gridfit(Gauss_Coor(:,1),Gauss_Coor(:,2),c_SQRT_Ux_Uy,gx,gy);
+            end				
+								
+		elseif Key_PLOT(4,8)==1
+			disp('      Resample sqrt(dis_x^2 + dis_y^2)....') 
+			if 	Key_Contour_Metd==1
+			    [X,Y,SQRT_Ux_Uy] = griddata(New_Gauss_Coor(:,1),New_Gauss_Coor(:,2),c_SQRT_Ux_Uy , ...
+	                              unique(New_Gauss_Coor(:,1)),unique(New_Gauss_Coor(:,2))');	
+			elseif 	Key_Contour_Metd==2
+                [SQRT_Ux_Uy,X,Y] = Tools_gridfit(New_Gauss_Coor(:,1),New_Gauss_Coor(:,2),c_SQRT_Ux_Uy ,gx,gy);
+			end	
+		end
+	    disp('      Contouring sqrt(dis_x^2 + dis_y^2)....') 
+		%如果是快速云图绘制法,那么有可能网格化之后的数据范围会发生变化,因此绘图时需要将云图范围修正回真实的范围
+		% if Key_Contour_Metd==2
+		    % caxis([min(dis_y), max(dis_y)]); 
+		% end
+		contourf(X,Y,SQRT_Ux_Uy,Num_Contourlevel,'LineStyle','none')
+		title('\it  Squared displacement: sqrt(disx^2 + dispy^2)','FontName','Times New Roman','FontSize',Size_Font)
+		clear SQRT_Ux_Uy
 	end
 	% Set colormap.
 	if Key_Flipped_Gray==0
@@ -179,7 +269,7 @@ for i = 1:2
 					  Elem_Node(iElem,3) Elem_Node(iElem,4) Elem_Node(iElem,1)]; % Nodes for current element
 				xi = Node_Coor(NN',1);                                           % Deformed x-coordinates of nodes
 				yi = Node_Coor(NN',2);                                           % Deformed y-coordinates of nodes
-				plot(xi,yi,'LineWidth',1,'Color',Color_Mesh)
+				plot(xi,yi,'LineWidth',0.5,'Color',Color_Mesh)
 			end
 		elseif Key_PLOT(4,8)==1
 			for iElem =1:Num_Elem
@@ -187,13 +277,12 @@ for i = 1:2
 					  Elem_Node(iElem,3) Elem_Node(iElem,4) Elem_Node(iElem,1)];     % Nodes for current element
 				xi = New_Node_Coor(NN',1);                                           % Deformed x-coordinates of nodes
 				yi = New_Node_Coor(NN',2);                                           % Deformed y-coordinates of nodes
-				plot(xi,yi,'LineWidth',1,'Color',Color_Mesh)
+				plot(xi,yi,'LineWidth',0.5,'Color',Color_Mesh)
 			end
 		end
 	end
-	%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 	% 绘制天然裂缝.
-	%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 	if Key_PLOT(4,12) == 1
 		disp(['      ----- Plotting natural crack line...'])
 		if isempty(Na_Crack_X)==0
@@ -230,15 +319,15 @@ for i = 1:2
 			end	
 		end
 	end
-			
+	
+	%Plot cracks line if necessary.	
 	if Key_PLOT(4,5) == 1
-	%%%%Plot cracks line if necessary.
 		if num_Crack(isub)~=0
 			for iii = 1:num_Crack(isub)
 				nPt = size(Crack_X{iii},2);
-				for iPt = 2:nPt
-					x = [Crack_X{iii}(iPt-1) Crack_X{iii}(iPt)];
-					y = [Crack_Y{iii}(iPt-1) Crack_Y{iii}(iPt)];
+				for i_Seg = 1:nPt-1
+				x = [Crack_X{iii}(i_Seg) Crack_X{iii}(i_Seg+1)];
+				y = [Crack_Y{iii}(i_Seg) Crack_Y{iii}(i_Seg+1)];
 					for j =1:2
 						%%% Get the local coordinates of the points of the crack. 
 						[cKesi,cYita] = Cal_KesiYita_by_Coors(x(j),y(j));
@@ -259,17 +348,144 @@ for i = 1:2
 					
 					last_x = [ x(1)+cdis_x(1)*scale x(2)+cdis_x(2)*scale];
 					last_y = [ y(1)+cdis_y(1)*scale y(2)+cdis_y(2)*scale];
-					
-					plot(last_x,last_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)   
+					%----------------------------
+					%如果是弧形裂缝,2017-07-18
+					%----------------------------
+					%Arc_Crack_Coor:x,y,r,Radian_Start,Radian_End,Radian,Point_Start_x,Point_Start_y,Point_End_x,Point_End_y
+					if abs(sum(Arc_Crack_Coor(iii,i_Seg,1:11)))>=1.0e-10 
+						c_R=Arc_Crack_Coor(iii,i_Seg,4);
+					    c_Direcction  =Arc_Crack_Coor(iii,i_Seg,3);
+						c_Radian_Start=Arc_Crack_Coor(iii,i_Seg,5)*pi/180;
+						c_Radian_End  =Arc_Crack_Coor(iii,i_Seg,6)*pi/180;
+						%**********************
+						%   如果是逆时针圆弧
+						%**********************
+						if c_Direcction >0.5
+							%若结束角度大于起始角度,则直接绘制圆弧
+							if c_Radian_End>=c_Radian_Start 
+								c_alpha=c_Radian_Start:pi/20:c_Radian_End;
+								c_x=c_R*cos(c_alpha)+Arc_Crack_Coor(iii,i_Seg,1);
+								c_y=c_R*sin(c_alpha)+Arc_Crack_Coor(iii,i_Seg,2);
+								for k=1:size(c_x,2)
+									[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x(k),c_y(k));
+									[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x(k),c_y(k));
+									N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+									N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+									U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+									[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+									dis_c_x(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+									dis_c_y(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+									last_c_x(k) = c_x(k)+dis_c_x(k)*scale;last_c_y(k) = c_y(k)+dis_c_y(k)*scale;
+								end
+								plot(last_c_x,last_c_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+							%若结束角度小于起始角度,则分成两部分绘制圆弧
+							else
+								%第1部分:Radian_Start到360
+								c_alpha=c_Radian_Start:pi/50:2*pi;
+								c_x=c_R*cos(c_alpha)+Arc_Crack_Coor(iii,i_Seg,1);
+								c_y=c_R*sin(c_alpha)+Arc_Crack_Coor(iii,i_Seg,2);
+								for k=1:size(c_x,2)
+									[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x(k),c_y(k));
+									[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x(k),c_y(k));
+									N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+									N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+									U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+									[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+									dis_c_x(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+									dis_c_y(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+									last_c_x(k) = c_x(k)+dis_c_x(k)*scale;last_c_y(k) = c_y(k)+dis_c_y(k)*scale;
+								end
+								plot(last_c_x,last_c_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+								%第2部分:0到Radian_End
+								c_alpha_2=0.0:pi/50:c_Radian_End;
+								c_x_2=c_R*cos(c_alpha_2)+Arc_Crack_Coor(iii,i_Seg,1);
+								c_y_2=c_R*sin(c_alpha_2)+Arc_Crack_Coor(iii,i_Seg,2);
+								for k=1:size(c_x_2,2)
+									[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x_2(k),c_y_2(k));
+									[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x_2(k),c_y_2(k));
+									N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+									N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+									U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+									[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+									dis_c_x_2(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+									dis_c_y_2(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+									last_c_x_2(k) = c_x_2(k)+dis_c_x_2(k)*scale;last_c_y_2(k) = c_y_2(k)+dis_c_y_2(k)*scale;
+								end
+								plot(last_c_x_2,last_c_y_2,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+							end
+						%**********************
+						%   如果是顺时针圆弧
+						%**********************
+						elseif c_Direcction < (-0.5)
+							%若结束角度大于起始角度,则分成两部分绘制圆弧
+							if c_Radian_End>=c_Radian_Start 
+								%第1部分:Radian_End到360
+								c_alpha=c_Radian_End:pi/50:2*pi;
+								c_x=c_R*cos(c_alpha)+Arc_Crack_Coor(iii,i_Seg,1);
+								c_y=c_R*sin(c_alpha)+Arc_Crack_Coor(iii,i_Seg,2);
+								for k=1:size(c_x,2)
+									[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x(k),c_y(k));
+									[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x(k),c_y(k));
+									N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+									N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+									U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+									[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+									dis_c_x(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+									dis_c_y(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+									last_c_x(k) = c_x(k)+dis_c_x(k)*scale;last_c_y(k) = c_y(k)+dis_c_y(k)*scale;
+								end
+								plot(last_c_x,last_c_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+								%第2部分:0到Radian_Start
+								c_alpha_2=0.0:pi/50:c_Radian_Start;
+								c_x_2=c_R*cos(c_alpha_2)+Arc_Crack_Coor(iii,i_Seg,1);
+								c_y_2=c_R*sin(c_alpha_2)+Arc_Crack_Coor(iii,i_Seg,2);
+								for k=1:size(c_x_2,2)
+									[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x_2(k),c_y_2(k));
+									[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x_2(k),c_y_2(k));
+									N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+									N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+									U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+									[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+									dis_c_x_2(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+									dis_c_y_2(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+									last_c_x_2(k) = c_x_2(k)+dis_c_x_2(k)*scale;last_c_y_2(k) = c_y_2(k)+dis_c_y_2(k)*scale;
+								end
+								plot(last_c_x_2,last_c_y_2,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+								
+							%若结束角度小于起始角度,则直接绘制圆弧
+							else
+                                c_alpha=c_Radian_End:pi/50:c_Radian_Start;
+								c_x=c_R*cos(c_alpha)+Arc_Crack_Coor(iii,i_Seg,1);
+								c_y=c_R*sin(c_alpha)+Arc_Crack_Coor(iii,i_Seg,2);
+								for k=1:size(c_x,2)
+									[Kesi,Yita] = Cal_KesiYita_by_Coors(c_x(k),c_y(k));
+									[c_Elem_Num] = Cal_Ele_Num_by_Coors(c_x(k),c_y(k));
+									N1  = Elem_Node(c_Elem_Num,1);N2  = Elem_Node(c_Elem_Num,2);                                                  
+									N3  = Elem_Node(c_Elem_Num,3);N4  = Elem_Node(c_Elem_Num,4);                                                
+									U = [DISP(N1,2) DISP(N1,3) DISP(N2,2) DISP(N2,3) DISP(N3,2) DISP(N3,3) DISP(N4,2) DISP(N4,3)];
+									[N,~,~,~]  = Cal_N_dNdkesi_J_detJ(Kesi,Yita,[],[]);
+									dis_c_x(k) = U(1)*N(1,1) + U(3)*N(1,3) + U(5)*N(1,5) + U(7)*N(1,7);  
+									dis_c_y(k) = U(2)*N(1,1) + U(4)*N(1,3) + U(6)*N(1,5) + U(8)*N(1,7);  
+									last_c_x(k) = c_x(k)+dis_c_x(k)*scale;last_c_y(k) = c_y(k)+dis_c_y(k)*scale;
+								end
+								plot(last_c_x,last_c_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)
+							end
+						end
+					%如果是直线裂缝
+					elseif abs(sum(Arc_Crack_Coor(iii,i_Seg,1:11)))<1.0e-10 
+						plot(last_x,last_y,'w','LineWidth',Width_Crack,'Color',Color_Crack)   					
+					end
 				end
 			end	
 		end
 	end
+	
 	% Plot shaped cracks if necessary.
 	if Key_PLOT(4,5) == 2 & num_Crack(isub)~=0
 	    disp(['      > Plotting shaped cracks......'])
 		Plot_Shaped_Cracks(Shaped_Crack_Points)
 	end
+	
 	% Plot holes.
 	disp(['      ----- Plotting hole...'])
 	if num_Hole ~=0
@@ -282,11 +498,14 @@ for i = 1:2
 				alpha = 2*pi/num_fineness*(j_P-1);
 				t_x(j_P) = Coor_x + c_R*cos(alpha);
 				t_y(j_P) = Coor_y + c_R*sin(alpha);
-				[Kesi,Yita] = Cal_KesiYita_by_Coors(t_x(j_P),t_y(j_P));
 				[c_Elem_Num] = Cal_Ele_Num_by_Coors(t_x(j_P),t_y(j_P));
-				[t_dis_x(j_P),t_dis_y(j_P)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi,Yita...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+                %Sometimes the element does not exist, for example, only part of the hole locates inside the model	
+			    if c_Elem_Num~=0
+				    [Kesi,Yita] = Cal_KesiYita_by_Coors(t_x(j_P),t_y(j_P));
+			    	[t_dis_x(j_P),t_dis_y(j_P)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi,Yita...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
+			    end
 			end
 			x_new = t_x + t_dis_x*Key_PLOT(4,6);
 			y_new = t_y + t_dis_y*Key_PLOT(4,6);
@@ -294,7 +513,8 @@ for i = 1:2
 			patch(x_new,y_new,'white','edgecolor','black','LineWidth',0.1)	
 		end	
 	end
-	%%% 绘制圆形夹杂.
+	
+	% 绘制圆形夹杂.
 	disp(['      ----- Plotting circle inclusion...'])
 	if num_Circ_Inclusion ~=0
 		for i_Inclusion = 1:num_Circ_Inclusion
@@ -309,7 +529,7 @@ for i = 1:2
 				[Kesi,Yita] = Cal_KesiYita_by_Coors(t_x(j_P),t_y(j_P));
 				[c_Elem_Num] = Cal_Ele_Num_by_Coors(t_x(j_P),t_y(j_P));
 				[t_dis_x(j_P),t_dis_y(j_P)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi,Yita...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
 			end
 			x_new = t_x + t_dis_x*Key_PLOT(4,6);
@@ -320,9 +540,8 @@ for i = 1:2
 			patch(x_new,y_new,Color_Inclusion,'facealpha',0.3,'edgecolor','black','LineWidth',0.1)	 %透明度'facealpha'
 		end	
 	end
-	%<<<<<<<<<<<<<<<<<<<<<<<<<<<
-	% 绘制多边形夹杂,2016-10-04
-	%<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+	% 绘制多边形夹杂,added on 2016-10-04
 	if num_Poly_Inclusion ~=0
 		disp(['      ----- Plotting poly inclusion...'])
 		for iii = 1:num_Poly_Inclusion
@@ -354,7 +573,7 @@ for i = 1:2
 				[Kesi,Yita] = Cal_KesiYita_by_Coors(t_x(k),t_y(k));
 				[c_Elem_Num] = Cal_Ele_Num_by_Coors(t_x(k),t_y(k));
 				[t_dis_x(k),t_dis_y(k)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi,Yita...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
 				%计算等分点的位移
 				for jjj =  1:Num_Diversion-1
@@ -364,7 +583,7 @@ for i = 1:2
 					[Kesi,Yita] = Cal_KesiYita_by_Coors(t_x(k),t_y(k));
 					[c_Elem_Num] = Cal_Ele_Num_by_Coors(t_x(k),t_y(k));
 					[t_dis_x(k),t_dis_y(k)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi,Yita...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y); 
 				end												      
 			end
@@ -382,6 +601,7 @@ for i = 1:2
 			% plot(x_new,y_new,'-','color','black')
 		end	
 	end	
+	
 	%绘制支撑剂的圆球
 	if Key_PLOT(4,10)==1 
 		%如果支撑剂直径和坐标文件存在：
@@ -409,11 +629,11 @@ for i = 1:2
 				%计算支撑剂中心坐标变形后的坐标
 				[Kesi_Up,Yita_Up] = Cal_KesiYita_by_Coors(old_Coor_x_Up,old_Coor_y_Up);
 				[dis_x_Up,dis_y_Up] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi_Up,Yita_Up...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y);
 				[Kesi_Low,Yita_Low] = Cal_KesiYita_by_Coors(old_Coor_x_Low,old_Coor_y_Low);
 				[dis_x_Low,dis_y_Low] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,isub,DISP,Kesi_Low,Yita_Low...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y);
 				%真实的支撑剂所在点的位移											  
 				c_dis_x = (dis_x_Up + dis_x_Low)/2;			
@@ -430,6 +650,7 @@ for i = 1:2
 			end
 		end
 	end
+	
 	%绘制破裂区
 	if Key_PLOT(4,15)==1 
 		%如果定义了破裂区
@@ -485,6 +706,8 @@ for i = 1:2
 	    Save_Picture(c_figure,Full_Pathname,'dpxs')
 	elseif i ==2
 	    Save_Picture(c_figure,Full_Pathname,'dpys')
+	elseif i ==3
+	    Save_Picture(c_figure,Full_Pathname,'dpss')
 	end		
 end
 

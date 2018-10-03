@@ -1,10 +1,19 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function Read_Geo
-% This function read information about nodes and elements from *node and *elem files which can be obtained 
-% by ansys mac file, Ansys2FraxFEM.mac.
+% This function read information about nodes and elements from *node and *elem files which can be obtained by ansys mac file, Ansys2PhiPsi_2D.mac.
 % After the reading, the extreme values will be calculated and stored as global values.
 
 global Full_Pathname Node_Coor Elem_Node Bou_x Bou_y Foc_x Foc_y
@@ -22,14 +31,16 @@ disp('    Reading node file....')
 % Check if Full_Pathname exist or not.
 if size(Full_Pathname,2) ==1
     disp(['    Error :: Filename is not defined.'])
-	Error_Message
+	%Error_Message
+	warndlg('Filename is not defined!','ERROR')
 end
 
 % Check if *.node file exists or not.
 Check_exist = [Full_Pathname,'.node'];
 if exist(Check_exist,'file') ==0
     disp(['    Error :: Can not find input files.'])
-	Error_Message
+	%Error_Message
+	warndlg('Can not find input files!','ERROR')
 end
 
 Node_Coor = load([Full_Pathname,'.node']);

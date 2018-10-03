@@ -1,6 +1,16 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function Plot_Mesh3D(isub,Crack_X,Crack_Y,Crack_Z,Post_Enriched_Nodes,POS)
 % This function plots the initial geometry,三维.
@@ -79,6 +89,7 @@ for iElem = 1:Num_Elem
 		  [Node_Coor(NN(5),2),Node_Coor(NN(8),2)],...
 		  [Node_Coor(NN(5),3),Node_Coor(NN(8),3)],'LineWidth',Line_width,'Color','black')	
 end 
+
 %绘制单元面
 Color_3D_ele_face = [189/255,252/255,201/255];
 FaceAlpha_3D_ele_face = 0.8;
@@ -120,6 +131,7 @@ if Key_PLOT(1,3) == 1
 		  fill3(c_x,c_y,c_z,Color_3D_ele_face,'FaceAlpha',FaceAlpha_3D_ele_face,'FaceLighting','gouraud')
   end 
 end
+
 %绘制裂缝面
 if Key_PLOT(1,5) == 1
     disp(['      ----- Plotting crack surface...'])
@@ -177,7 +189,6 @@ if isempty(Post_Enriched_Nodes) ~= 1
 	end
 end
 
-
 % Plot enriched nodes
 if isempty(Post_Enriched_Nodes) ~= 1
     length_min = min(c_X_Length,min(c_Y_Length,c_Z_Length))/5.0; 
@@ -209,16 +220,14 @@ if isempty(Post_Enriched_Nodes) ~= 1
 end
 
 % Plot Gauss points.
-if Key_PLOT(1,4) == 1
-    disp(['      ----- Plotting Gauss points...'])
-    % Read gauss point coordinates file.
-	Gauss_Coor = load([Full_Pathname,'.gcor_',num2str(isub)]);
-	plot(Gauss_Coor(:,2),Gauss_Coor(:,3),'bo','MarkerSize',1,'Color','black')
+% if Key_PLOT(1,4) == 1
+    % disp(['      ----- Plotting Gauss points...'])
+    %%%% Read gauss point coordinates file.
+	% Gauss_Coor = load([Full_Pathname,'.gcor_',num2str(isub)]);
+	% plot(Gauss_Coor(:,2),Gauss_Coor(:,3),'bo','MarkerSize',1,'Color','black')
 
-	clear Gauss_Coor
-end
-
-
+	% clear Gauss_Coor
+% end
 
 % Save pictures.
 Save_Picture(c_figure,Full_Pathname,'mesh')

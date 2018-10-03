@@ -12,7 +12,13 @@
 %     Author:     Fang Shi  
 %     Contact me: shifang@ustc.edu.cn     
 
-function [Signed_Distance] = Cal_Signed_Distance(Line_AB,Point_C)
-% This function calculates the signed distance from the Point_C to the Line_AB.
+function [Sign_O] = Cal_Sign_1_and_0(Variable)
+% This function calculates the sign of a variable.
 
-Signed_Distance = det([Line_AB(2,:)-Line_AB(1,:);Point_C-Line_AB(1,:)])/norm(Line_AB(2,:)-Line_AB(1,:));
+if(Variable == 0.0)
+  Sign_O = 0.0;
+elseif (Variable > 0.0)
+  Sign_O = 1.0;
+elseif (Variable < 0.0)
+  Sign_O = 0.0;  
+end

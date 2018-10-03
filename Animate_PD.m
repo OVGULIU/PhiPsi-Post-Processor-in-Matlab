@@ -12,7 +12,7 @@
 %     Author:     Fang Shi  
 %     Contact me: shifang@ustc.edu.cn     
 
-function Animate_MD
+function Animate_PD
 %分子动力学分析动画生成.
 
 global Node_Coor Elem_Node Outline
@@ -37,48 +37,11 @@ global Key_Time_String
 global Num_Step_to_Plot num_molecule
 global Key_Data_Format
 
-disp('    Generating MD animations......')
-
-% 如果Num_Step_to_Plot = -999,则程序自动寻找最后一步的稳定计算结果并后处理
-% if Num_Step_to_Plot == -999
-    % for i_Check =1:5000
-	    % if exist([Full_Pathname,'.mdco_',num2str(i_Check)], 'file') ==2 
-	        % Num_Step_to_Plot = i_Check;
-	    % end
-	% end
-% end
-% if Num_Step_to_Plot==-999
-	% disp(' >> Error :: No result files found, post-processor terminated.') 
-	% Error_Message
-% end
+disp('    Generating PD animations......')
 
 
+dscale = Key_PLOT(8,6);
 
-
-% 读取Box文件
-if exist([Full_Pathname,'.mdbx'], 'file') ==2
-    Yes_has_FZ = 1;
-	disp('    > Reading mdbx file....') 
-	namefile= [Full_Pathname,'.mdbx'];
-	data=fopen(namefile,'r'); 
-	lineNum =0;
-	while ~feof(data)
-		lineNum = lineNum+1;
-		TemData = fgetl(data);    
-		if lineNum==2   %第2行
-			ttt_DATA(1:2)  = str2num(TemData);
-		end
-	end
-	fclose(data); 
-	box_zone_min_x = 0; 
-	box_zone_max_x = ttt_DATA(1);
-	box_zone_min_y = 0; 
-	box_zone_max_y = ttt_DATA(2);
-end
-or_box_zone_min_x = box_zone_min_x; 
-or_box_zone_max_x = box_zone_max_x;
-or_box_zone_min_y = box_zone_min_y; 
-or_box_zone_max_y = box_zone_max_y;
 
 % 如果存在时间步文件
 if  exist([Full_Pathname,'.hftm'], 'file') ==2 
@@ -125,16 +88,21 @@ if Num_Step_to_Plot == -999
     Num_Step_to_Plot = Itera_Num(num_Iter);
 end
 
-%获取分子数目
-MD_Coor = load([Full_Pathname,'.mdco_',num2str(Num_Step_to_Plot)]);
-num_molecule = size(MD_Coor,1);
-disp(['    Number of molecules:',num2str(num_molecule)]);
+%获取点的数目
+PD_Results = load([Full_Pathname,'.pdrs_',num2str(Num_Step_to_Plot)]);
+num_points = size(PD_Results,1);
+disp(['    Number of points:',num2str(num_points)]);
+
+%获取变形后的模型坐标范围
+zone_min_x = min(PD_Results(1:num_points,2) + PD_Results(1:num_points,4)*dscale);
+zone_max_x = max(PD_Results(1:num_points,2) + PD_Results(1:num_points,4)*dscale);
+zone_min_y = min(PD_Results(1:num_points,3) + PD_Results(1:num_points,5)*dscale);
+zone_max_y = max(PD_Results(1:num_points,3) + PD_Results(1:num_points,5)*dscale);
 
 % 如果需要绘制轨迹线,则很耗时间,可以先把所有位置文件读入内存
-if Key_PLOT(6,2) >= 1
-    % all_MD_Coor=cell(num_Iter,)
+if Key_PLOT(8,2) >= 1
     for ii=1:num_Iter
-	    all_MD_Coor(ii,1:num_molecule,1:3) = load([Full_Pathname,'.mdco_',num2str(Itera_Num(ii))]);
+	    all_PD_RS(ii,1:num_points,1:6) = load([Full_Pathname,'.pdrs_',num2str(Itera_Num(ii))]);
     end
 end
 		
@@ -144,114 +112,49 @@ for c_i=1:num_Iter
 	if mod(c_i,Output_Freq)==0
 	    i_output = i_output + 1;
 
-		scale = Key_PLOT(5,6);
+		scale = Key_PLOT(8,6);
 		
 		% New figure.
 		Tools_New_Figure
 		hold on;
-		title('\it Position of particles','FontName','Times New Roman','FontSize',Size_Font)
+		title('\it Position of points','FontName','Times New Roman','FontSize',Size_Font)
 		axis off; 
 		axis equal;
-        axis([box_zone_min_x box_zone_max_x box_zone_min_y box_zone_max_y]);
+        axis([zone_min_x zone_max_x zone_min_y zone_max_y]);
 
 		%<<<<<<<<<<<<<<<<<<<<<<<<
-		% 绘制分子位置及轨迹线.
+		% 绘制点的位置及轨迹线.
 		%<<<<<<<<<<<<<<<<<<<<<<<<
-		if Key_PLOT(6,1) == 1
+		if Key_PLOT(8,1) == 1
 			% 轨迹线
-			if Key_PLOT(6,2) >= 1
+			if Key_PLOT(8,2) >= 1
 			    if c_i>=2
-					disp(['      ----- Plotting moving paths of particles...'])
+					disp(['      ----- Plotting moving paths of points...'])
 					tem1 = 1;
 					tem2 = c_i-1;
 					%如果Key_PLOT(6,2)=2,则只绘制最近 Key_PLOT(6,2)个计算步的轨迹
 					if Key_PLOT(6,2) > 1
-					    if (tem2 - Key_PLOT(6,2))>=1
-						    tem1 = tem2 - Key_PLOT(6,2);
+					    if (tem2 - Key_PLOT(8,2))>=1
+						    tem1 = tem2 - Key_PLOT(8,2);
 						end
 					end
 					for jjj =tem1:tem2
-						% MD_Coor = load([Full_Pathname,'.mdco_',num2str(Itera_Num(jjj+1))]);
-						% Old_MD_Coor = load([Full_Pathname,'.mdco_',num2str(Itera_Num(jjj))]);
-						MD_Coor(1:num_molecule,1:3) = all_MD_Coor(jjj+1,1:num_molecule,1:3);
-						Old_MD_Coor(1:num_molecule,1:3) = all_MD_Coor(jjj,1:num_molecule,1:3);
-						all_c_x(1,1:num_molecule) = MD_Coor(1:num_molecule,2);
-						all_c_x(2,1:num_molecule) = Old_MD_Coor(1:num_molecule,2);
-						all_c_y(1,1:num_molecule) = MD_Coor(1:num_molecule,3);
-						all_c_y(2,1:num_molecule) = Old_MD_Coor(1:num_molecule,3);
-						
-						% line(all_c_x,all_c_y,'LineWidth',1.0,'Color','blue');   %蓝色
-						line(all_c_x,all_c_y,'LineWidth',1.0,'Color',[176/255,224/255,230/255]); %浅蓝色
+						PD_Results(1:num_points,1:6) = all_PD_RS(jjj+1,1:num_points,1:6);
+						Old_PD_Results(1:num_points,1:6) = all_PD_RS(jjj,1:num_points,1:6);
+						all_c_x(1,1:num_points) = PD_Results(1:num_points,2)+PD_Results(1:num_points,4)*dscale;
+						all_c_x(2,1:num_points) = Old_PD_Results(1:num_points,2)+Old_PD_Results(1:num_points,4)*dscale;
+						all_c_y(1,1:num_points) = PD_Results(1:num_points,3)+PD_Results(1:num_points,5)*dscale;
+						all_c_y(2,1:num_points) = Old_PD_Results(1:num_points,3)+Old_PD_Results(1:num_points,5)*dscale;
+						line(all_c_x,all_c_y,'LineWidth',1.0,'Color','blue');
 					end
 				end
 			end
-			disp(['      ----- Plotting positions of particles...'])
+			disp(['      ----- Plotting positions of points...'])
 			% Read gauss point coordinates file.
-			MD_Coor(1:num_molecule,1:3) = load([Full_Pathname,'.mdco_',num2str(Itera_Num(c_i))]);
-			plot(MD_Coor(1:num_molecule,2),MD_Coor(1:num_molecule,3),'bo','MarkerSize',4,'Color','black','MarkerFaceColor','black')
-			clear MD_Coor
+			PD_rs(1:num_points,1:6) = load([Full_Pathname,'.pdrs_',num2str(Itera_Num(c_i))]);
+			plot(PD_rs(1:num_points,2)+dscale*PD_rs(1:num_points,4),PD_rs(1:num_points,3)+dscale*PD_rs(1:num_points,5),'bo','MarkerSize',4,'Color','black','MarkerFaceColor','black')
+			clear PD_Results
 		end
-		
-		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-		%         绘制Box
-		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-		% if Key_PLOT(6,15)==1 
-			% disp(['      ----- Plotting box......'])  
-			% c_x = [box_zone_min_x,box_zone_max_x];
-			% c_y = [box_zone_min_y,box_zone_min_y];
-			% line(c_x,c_y,'LineWidth',1.5,'Color','green')
-			% c_x = [box_zone_max_x,box_zone_max_x];
-			% c_y = [box_zone_min_y,box_zone_max_y];
-			% line(c_x,c_y,'LineWidth',1.5,'Color','green')
-			% c_x = [box_zone_max_x,box_zone_min_x];
-			% c_y = [box_zone_max_y,box_zone_max_y];
-			% line(c_x,c_y,'LineWidth',1.5,'Color','green')
-			% c_x = [box_zone_min_x,box_zone_min_x];
-			% c_y = [box_zone_max_y,box_zone_min_y];
-			% line(c_x,c_y,'LineWidth',1.5,'Color','green')
-		% end
-		if Key_PLOT(6,15)==1 
-			disp(['      ----- Plotting box......'])  
-			
-			% 为了防止靠近边界的地方画不出来
-			c_L = or_box_zone_max_x - or_box_zone_min_x;
-			c_H = or_box_zone_max_y - or_box_zone_min_y;
-			box_zone_min_x = or_box_zone_min_x + c_L*0.01;
-			box_zone_max_x = or_box_zone_max_x - c_L*0.01;
-			box_zone_min_y = or_box_zone_min_y + c_H*0.01;
-			box_zone_max_y = or_box_zone_max_y - c_H*0.01;
-			
-			c_x = [box_zone_min_x,box_zone_max_x];
-			c_y = [box_zone_min_y,box_zone_min_y];
-			line(c_x,c_y,'LineWidth',1.5,'Color','black')
-			c_x = [box_zone_max_x,box_zone_max_x];
-			c_y = [box_zone_min_y,box_zone_max_y];
-			line(c_x,c_y,'LineWidth',1.5,'Color','black')
-			c_x = [box_zone_max_x,box_zone_min_x];
-			c_y = [box_zone_max_y,box_zone_max_y];
-			line(c_x,c_y,'LineWidth',1.5,'Color','black')
-			c_x = [box_zone_min_x,box_zone_min_x];
-			c_y = [box_zone_max_y,box_zone_min_y];
-			line(c_x,c_y,'LineWidth',1.5,'Color','black')
-			% 绘制5x5的标记线
-			if Key_PLOT(6,9)==1 
-				disp(['      ----- Plotting maker lines......'])  
-				line_width_marker = 0.5;
-				for i_marker_horizon =1:4
-					delta_H = c_H/5.0;
-					c_x = [box_zone_min_x,box_zone_max_x];
-					c_y = [box_zone_min_y+delta_H*i_marker_horizon,box_zone_min_y+delta_H*i_marker_horizon];
-					line(c_x,c_y,'LineWidth',line_width_marker,'Color',[192/255,192/255, 192/255])
-				end
-				for i_marker_vert =1:4
-					delta_L = c_L/5.0;
-					c_x = [box_zone_min_x+delta_L*i_marker_vert,box_zone_min_x+delta_L*i_marker_vert];
-					c_y = [box_zone_min_y,box_zone_max_y];
-					line(c_x,c_y,'LineWidth',line_width_marker,'Color',[192/255,192/255, 192/255])
-				end		
-			end	
-		end
-		
 		
 		%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		% Plot text on the left or the bottom of the figure.
@@ -276,38 +179,38 @@ for c_i=1:num_Iter
 		end
 		%plot_string_Time_HF   = ['Time: ms'];
 		plot_string_Scale  = ['Scale factor: ',num2str(scale)];
-		range_W = abs(box_zone_max_x-box_zone_min_x);
-		range_H = abs(box_zone_max_y-box_zone_min_y);
+		range_W = abs(zone_max_x-zone_min_x);
+		range_H = abs(zone_max_y-zone_min_y);
 		if range_H >= 0.75*range_W      % Left
-			loc_x = -range_H/2+ box_zone_min_x;
-			loc_y =  box_zone_max_y-range_H*0.05;
+			loc_x = -range_H/2+ zone_min_x;
+			loc_y =  zone_max_y-range_H*0.05;
 			text(loc_x,loc_y,plot_string_MatMES,'color','black');
-			loc_y =  box_zone_max_y-range_H*0.15;
+			loc_y =  zone_max_y-range_H*0.15;
 			text(loc_x,loc_y,plot_string_Scale,'color','black');
-			loc_y =  box_zone_max_y-range_H*0.25;
+			loc_y =  zone_max_y-range_H*0.25;
 			text(loc_x,loc_y,plot_string_Frame,'color','black');
 			if Key_Dynamic == 1
-				loc_y =  box_zone_max_y-range_H*0.35;
+				loc_y =  zone_max_y-range_H*0.35;
 				text(loc_x,loc_y,plot_string_Time, 'color','black');
 			end
 			if  exist([Full_Pathname,'.hftm'], 'file') ==2 
-				loc_y =  box_zone_max_y-range_H*0.35;
+				loc_y =  zone_max_y-range_H*0.35;
 				text(loc_x,loc_y,plot_string_Time, 'color','black');
 			end
 		else                            % Bottom
-			loc_y =  box_zone_min_y-range_H*0.05;
-			loc_x =  box_zone_min_x;
+			loc_y =  zone_min_y-range_H*0.05;
+			loc_x =  zone_min_x;
 			text(loc_x,loc_y,plot_string_MatMES,'color','black');
-			loc_x =  box_zone_min_x + range_W*0.25;
+			loc_x =  zone_min_x + range_W*0.25;
 			text(loc_x,loc_y,plot_string_Scale,'color','black');
-			loc_x =  box_zone_min_x + range_W*0.45;
+			loc_x =  zone_min_x + range_W*0.45;
 			text(loc_x,loc_y,plot_string_Frame,'color','black');
 			if Key_Dynamic == 1
-				loc_x =  box_zone_min_x + range_W*0.60;
+				loc_x =  zone_min_x + range_W*0.60;
 				text(loc_x,loc_y,plot_string_Time, 'color','black');
 			end
 			if  exist([Full_Pathname,'.hftm'], 'file') ==2 
-				loc_x =  box_zone_min_x + range_W*0.60;
+				loc_x =  zone_min_x + range_W*0.60;
 				text(loc_x,loc_y,plot_string_Time, 'color','black');
 			end
 		end

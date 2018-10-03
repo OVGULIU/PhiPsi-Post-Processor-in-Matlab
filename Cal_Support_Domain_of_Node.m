@@ -1,18 +1,29 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function [DOMAIN_Outline,Domain_El] = Cal_Support_Domain_of_Node(iNode,i_Elem)
 % This function calculates the support domain of node.
 
 global Elem_Node 
 global Num_Elem
-% iNode
+
 % Get elements which contain iNode.
 Domain_El=[];
 for i = 1:Num_Elem
+    % Four nodes of the current element.
 	NODES_iElem = [Elem_Node(i,1) Elem_Node(i,2) ...
-		           Elem_Node(i,3) Elem_Node(i,4)];             % Four nodes of the current element.
+		           Elem_Node(i,3) Elem_Node(i,4)];             
 	if any(NODES_iElem==iNode) ==1
 	    Domain_El = [Domain_El i];
 	end

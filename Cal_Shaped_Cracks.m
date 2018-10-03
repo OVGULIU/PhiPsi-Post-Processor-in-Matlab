@@ -1,20 +1,41 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function [Shaped_Crack_Points]=Cal_Shaped_Cracks(Crack_X,Crack_Y,ifra,isub,num_Crack,Crack_Tip_Type,POS,...
-                            Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+                            Enriched_Node_Type,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 					        Coors_Vertex,Coors_Junction,Coors_Tip,DISP,scale)
-% This function plots the shaped cracks.
-global aveg_area_ele
-global Key_HF Num_Ele_Bore Node_Coor Elem_Node Num_Elem
-global Edge_crack_inter Full_Pathname
+% This function calculates the coodinates of points along the surface line of the shaped crack which are then used to plot the shaped cracks.
 
+global aveg_area_ele
+global Num_Ele_Bore Node_Coor Elem_Node Num_Elem
+global Edge_crack_inter Full_Pathname
+global Key_Data_Format
 
 %计算增强单元的平均大小
 Total_Enr_Area =0.0;
 total_enr_Ele  =0;
-Elem_Type = load([Full_Pathname,'.elty_',num2str(isub)]);
+
+if Key_Data_Format==1 
+	Elem_Type = load([Full_Pathname,'.elty_',num2str(isub)]);
+elseif Key_Data_Format==2  %Binary
+	c_file = fopen([Full_Pathname,'.elty_',num2str(isub)],'rb');
+	[cc_Elem_Type,cc_count]   = fread(c_file,inf,'int');
+	fclose(c_file);
+	%转换成Matlab中的数据格式
+	Elem_Type = (reshape(cc_Elem_Type,num_Crack(isub),Num_Elem))';
+end		
+
 for i=1:Num_Elem
     N1  = Elem_Node(i,1);                                                  % Node 1 for current element
     N2  = Elem_Node(i,2);                                                  % Node 2 for current element
@@ -50,8 +71,6 @@ if isempty(Crack_X)==0
 			Offs_Edge_Tip_Up=[];
 			Offs_Edge_Tip_Down=[];
 			Flag_Edge_Tip =0;
-			% tem_first_tip = [];
-			% tem_second_tip = [];
 			tt=[];
 			for iPt = 2:nPt
 				x = [Crack_X{i}(iPt-1) Crack_X{i}(iPt)];
@@ -112,32 +131,8 @@ if isempty(Crack_X)==0
 			    Shaped_Points = [first_Tip;Offsetted_UP;Offs_Edge_Tip_Up;second_Tip;Offs_Edge_Tip_Down;flipud(Offsetted_DOWN)];
 			end
 			
-				% Consider the borehole element(Hydraulic fracturing)for the symmetry model, the tip element should be
-				% changed to a Heaviside element.
-				% The following codes are used only for one horizontal crack!
-			    % if Key_HF==1 && isempty(Num_Ele_Bore)==0
-				    % Edge_x = Edge_crack_inter(1,1);
-					% Edge_y = Edge_crack_inter(1,2);
-			        % Shaped_Points = [Edge_x Edge_y+offset_delta;Offsetted_UP;second_Tip;flipud(Offsetted_DOWN);Edge_x Edge_y-offset_delta];
-			    % end
-			
 			% Remove duplicate rows of Shaped_Points.
-            Shaped_Points=unique(Shaped_Points,'rows','stable');
-			% hold on
-			% plot(Shaped_Points(:,1),Shaped_Points(:,2),'w','LineWidth',1,'Color','red') 
-			
-
-			%################################################################################
-	        % Tools_New_Figure
-			% axis off; axis equal;
-			% hold on
-			% plot(Shaped_Points(:,1),Shaped_Points(:,2),'w','LineWidth',1,'Color','r') 
-			% plot(Offsetted_UP(:,1),Offsetted_UP(:,2),'ko','MarkerSize',2,'Color','green') 
-			% plot(Offsetted_DOWN(:,1),Offsetted_DOWN(:,2),'ko','MarkerSize',2,'Color','blue') 
-			% plot(Crack_X{i},Crack_Y{i},'w','LineWidth',1,'Color','black') 
-			% plot(Crack_X{i},Crack_Y{i},'bs','MarkerSize',2,'Color','black') 
-			% plot(tt(:,1),tt(:,2),'ko','MarkerSize',2,'Color','black')
-			%################################################################################														  
+            Shaped_Points=unique(Shaped_Points,'rows','stable');												  
 			
 			
 			for j =1:size(Shaped_Points,1)
@@ -147,21 +142,13 @@ if isempty(Crack_X)==0
 				[c_Elem_Num] = Cal_Ele_Num_by_Coors(Shaped_Points(j,1),Shaped_Points(j,2));
 				% Calculate the displacement of the points of the crack.		
 				[dis_x(j),dis_y(j)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,ifra,DISP,Kesi,Yita...
-													    ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+													    ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 													    Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y);
                 				
 				Last_Shaped_Points(j,1) = Shaped_Points(j,1)+dis_x(j)*scale;
 				Last_Shaped_Points(j,2) = Shaped_Points(j,2)+dis_y(j)*scale;
 			end
 			Shaped_Crack_Points{i}=Last_Shaped_Points;
-			% Last_Shaped_Points
-			
-			%################################################################################
-		    % Tools_New_Figure
-			% axis off; axis equal;
-			% plot(Shaped_Crack_Points{i}(:,1),Shaped_Crack_Points{i}(:,2),'w','LineWidth',1,'Color','r') 
-			%################################################################################
-			
 		%----------------------------------------------
 		% Case 2: The crack has junction tip, then:
 		%---------------------------------------------- 
@@ -233,7 +220,7 @@ if isempty(Crack_X)==0
 					[c_Elem_Num] = Cal_Ele_Num_by_Coors(Shaped_Points2(j,1),Shaped_Points2(j,2));
 					% Calculate the displacement of the points of the crack.		
 					[dis_x(j),dis_y(j)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,ifra,DISP,Kesi,Yita...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y);
 					Last_Shaped_Points2(j,1) = Shaped_Points2(j,1)+dis_x(j)*scale;
 					Last_Shaped_Points2(j,2) = Shaped_Points2(j,2)+dis_y(j)*scale;
@@ -307,7 +294,7 @@ if isempty(Crack_X)==0
 					[c_Elem_Num] = Cal_Ele_Num_by_Coors(Shaped_Points3(j,1),Shaped_Points3(j,2));
 					% Calculate the displacement of the points of the crack.		
 					[dis_x(j),dis_y(j)] = Cal_Anypoint_Disp(c_Elem_Num,Enriched_Node_Type,POS,ifra,DISP,Kesi,Yita...
-																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,...
+																 ,Elem_Type,Coors_Element_Crack,Node_Jun_elem,Node_Jun_Hole,Node_Cross_elem,...
 																  Coors_Vertex,Coors_Junction,Coors_Tip,Crack_X,Crack_Y);
 					Last_Shaped_Points3(j,1) = Shaped_Points3(j,1)+dis_x(j)*scale;
 					Last_Shaped_Points3(j,2) = Shaped_Points3(j,2)+dis_y(j)*scale;

@@ -1,9 +1,19 @@
-% Written By: Shi Fang, 2014
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function Plot_SIF_curves(POST_Substep,num_Cr_to_Plot,num_Tip)
-
+% 绘制应力强度因子曲线.
 global Key_PLOT Full_Pathname Num_Node Num_Foc_x Num_Foc_y Foc_x Foc_y
 global num_Crack Key_Dynamic Real_Iteras Real_Sub Key_Contour_Metd
 global Output_Freq num_Output_Sub Key_Crush Num_Crack_HF_Curves Size_Font 
@@ -48,7 +58,9 @@ for i_Fra = 1:Max_Frac
 	end
 end
 
+%******************************************
 %读取每个破裂步对应的裂缝号的应力强度因子
+%******************************************
 for i_Fra = 1:Max_Frac
     c_Iter_num = Itera_Num(i_Fra);
 	if exist([Full_Pathname,'.sifs_',num2str(c_Iter_num)], 'file') ==2 
@@ -69,40 +81,50 @@ for i_Fra = 1:Max_Frac
 end
 
 
-% -----------------------------------
-% 绘制各条裂纹的曲线(水力压裂相关)
-% -----------------------------------
-	disp(['    > 绘制裂纹 ',num2str(num_Cr_to_Plot),'裂尖 ',num2str(num_Tip),' I型应力强度因子曲线...']) 
-	c_figure = figure('units','normalized','position',[0.2,0.2,0.6,0.6],'Visible','on');
-	hold on;
-	if num_Cr_to_Plot==1 
-		title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
-	elseif num_Cr_to_Plot==2
-		title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
-	elseif num_Cr_to_Plot==3
-		title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
-	elseif num_Cr_to_Plot==4
-		title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
-	elseif num_Cr_to_Plot==5
-		title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
-	elseif num_Cr_to_Plot==6
-		title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
-	elseif num_Cr_to_Plot==7
-		title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
-	elseif num_Cr_to_Plot==8
-		title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
-	elseif num_Cr_to_Plot==9
-		title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
-	elseif num_Cr_to_Plot==10
-		title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
-	end
-	Plot_x = 1:1:Max_Frac;
-	if num_Tip==1
-	    plot(Plot_x ,Plot_SIFs(1:Max_Frac,1)/1.0E6,'black-o','LineWidth',1)
-	elseif num_Tip==2
-	    plot(Plot_x ,Plot_SIFs(1:Max_Frac,3)/1.0E6,'black-o','LineWidth',1)
-    end
-	% set(gca,'xtick',1:1:Max_Frac)     
-    xlabel('Fracturing step','FontName','Times New Roman','FontSize',Size_Font) 
-	% xlabel('Time step','FontName','Times New Roman','FontSize',Size_Font) 
-    ylabel('KI','FontName','Times New Roman','FontSize',Size_Font) 	
+%************************************
+% 绘制各条裂纹的应力强度因子曲线
+%************************************
+disp(['    > 绘制裂纹 ',num2str(num_Cr_to_Plot),'裂尖 ',num2str(num_Tip),' I型应力强度因子曲线...']) 
+c_figure = figure('units','normalized','position',[0.2,0.2,0.6,0.6],'Visible','on');
+hold on;
+if num_Cr_to_Plot==1 
+	title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
+elseif num_Cr_to_Plot==2
+	title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
+elseif num_Cr_to_Plot==3
+	title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
+elseif num_Cr_to_Plot==4
+	title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
+elseif num_Cr_to_Plot==5
+	title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
+elseif num_Cr_to_Plot==6
+	title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
+elseif num_Cr_to_Plot==7
+	title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
+elseif num_Cr_to_Plot==8
+	title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
+elseif num_Cr_to_Plot==9
+	title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
+elseif num_Cr_to_Plot==10
+	title('\it KI of crack 1 (MPa*m^1^/^2)','FontName','Times New Roman','FontSize',Size_Font)
+end
+Plot_x = 1:1:Max_Frac;
+if num_Tip==1
+	plot(Plot_x ,Plot_SIFs(1:Max_Frac,1)/1.0E6,'black-o','LineWidth',1)
+elseif num_Tip==2
+	plot(Plot_x ,Plot_SIFs(1:Max_Frac,3)/1.0E6,'black-o','LineWidth',1)
+end
+
+%保存文件
+% Plot_x=Plot_x/66;
+% K = Plot_SIFs(1:Max_Frac,3);
+% K=K/10e6/sqrt(2);
+% Plot_x_T = Plot_x';
+% K_T = K';
+% save X:\dynamic_time_phipsi.txt Plot_x_T -ascii
+% save X:\dynamic_K_phipsi.txt K -ascii
+
+% set(gca,'xtick',1:1:Max_Frac)     
+xlabel('Fracturing step','FontName','Times New Roman','FontSize',Size_Font) 
+% xlabel('Time step','FontName','Times New Roman','FontSize',Size_Font) 
+ylabel('KI','FontName','Times New Roman','FontSize',Size_Font) 	

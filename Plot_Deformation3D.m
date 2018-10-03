@@ -1,6 +1,16 @@
-% Written By: Shi Fang, 2016-10-24
-% Website: phipsi.top
-% Email: phipsi@sina.cn
+%     .................................................
+%             ____  _       _   ____  _____   _        
+%            |  _ \| |     |_| |  _ \|  ___| |_|       
+%            | |_) | |___   _  | |_) | |___   _        
+%            |  _ /|  _  | | | |  _ /|___  | | |       
+%            | |   | | | | | | | |    ___| | | |       
+%            |_|   |_| |_| |_| |_|   |_____| |_|       
+%     .................................................
+%     PhiPsi:     a general-purpose computational      
+%                 mechanics program written in Fortran.
+%     Website:    http://phipsi.top                    
+%     Author:     Fang Shi  
+%     Contact me: shifang@ustc.edu.cn     
 
 function Plot_Deformation3D(isub,Crack_X,Crack_Y,Crack_Z,Post_Enriched_Nodes,POS)
 %绘制三维变形图.
@@ -17,6 +27,7 @@ global Color_Backgro_Mesh_5 Color_Backgro_Mesh_6 Color_Backgro_Mesh_7
 global Color_Backgro_Mesh_8 Color_Backgro_Mesh_9 Color_Backgro_Mesh_10
 global Elem_Material Num_Step_to_Plot DISP Num_Foc_z
 global Num_Foc_x Num_Foc_y Foc_x Foc_y Num_Foc_z Foc_z FORCE_Matrix
+global Key_Data_Format
 
 % global Tri_BCD
 disp(['      ----- Plotting deformed mesh......'])
@@ -50,9 +61,6 @@ Max_Z_Coor_New = max(max(New_Node_Coor(1:Num_Node,3)));
 c_X_Length = Max_X_Coor_New-Min_X_Coor_New;
 c_Y_Length = Max_Y_Coor_New-Min_Y_Coor_New;
 c_Z_Length = Max_Z_Coor_New-Min_Z_Coor_New;
-	
-	% length of force arrow
-    % REMOVE:length_arrow = sqrt(max_area_ele);
 	     
 % New figure.
 Tools_New_Figure
@@ -111,6 +119,7 @@ if Key_PLOT(2,3) == 1
 		  fill3(c_x,c_y,c_z,Color_3D_ele_face,'FaceAlpha',FaceAlpha_3D_ele_face)
   end 
 end
+
 %绘制变形后的网格
 Line_width =0.1;
 if Key_PLOT(2,1)==1
@@ -142,6 +151,7 @@ if Key_PLOT(2,1)==1
 			  [New_Node_Coor(NN(5),3),New_Node_Coor(NN(8),3)],'LineWidth',Line_width,'Color','black')		
 	end 
 end
+
 %绘制变形前的网格
 Line_width =0.1;
 if Key_PLOT(2,8)==1
@@ -260,7 +270,6 @@ if isempty(Post_Enriched_Nodes) ~= 1
 	end
 end
 
-
 %绘制裂缝面
 if Key_PLOT(2,5) == 1
     disp(['      ----- Plotting crack surface...'])
@@ -292,6 +301,7 @@ disp(['      ----- Plotting elements...'])
 % patch(xi_8,yi_8,zi_8,Color_Backgro_Mesh_8) 
 % patch(xi_9,yi_9,zi_9,Color_Backgro_Mesh_9) 
 % patch(xi_10,yi_10,zi_10,Color_Backgro_Mesh_10)
+
 % plot3(xi_1,yi_1,zi_1,Color_Backgro_Mesh_1) 
 % plot3(xi_2,yi_2,zi_2,Color_Backgro_Mesh_2)    
 % plot3(xi_3,yi_3,zi_3,Color_Backgro_Mesh_3)   
@@ -304,9 +314,7 @@ disp(['      ----- Plotting elements...'])
 % plot3(xi_10,yi_10,zi_10,Color_Backgro_Mesh_10)
 
 % Plot Tri_BCD.
-% patch(Tri_BCD(:,1),Tri_BCD(:,2),[235/255 142/255 85/255]);    % ****************************
-                        
-
+% patch(Tri_BCD(:,1),Tri_BCD(:,2),[235/255 142/255 85/255]); 
 
 % Save pictures.
 Save_Picture(c_figure,Full_Pathname,'defm')
